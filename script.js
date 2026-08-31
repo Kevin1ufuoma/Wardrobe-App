@@ -2,7 +2,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
   
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let supabaseClient = null;
+  let useCloudDB = false;
+
+  try {
+    // 🟢 THE CRITICAL VARIABLE FIX: CDN assigns to lowercase 'supabase' object
+    if (typeof supabase !== 'undefined') {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      useCloudDB = true;
+      console.log("🟢 Connected to Supabase Cloud Database successfully.");
+    } else {
+      console.warn("⚠️ Supabase CDN not loaded yet. Falling back to local storage environment mode.");
+    }
+  } catch (err) {
+    console.error("🔴 Supabase init crashed. Activation fallback engaged:", err);
+  }
   
   
   // 1. SELECTOR HOOKS & BASE VARIABLES
