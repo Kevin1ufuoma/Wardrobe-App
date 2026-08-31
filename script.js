@@ -1,4 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const SUPABASE_URL = "https://supabase.com/dashboard/project/ibdhreylfyzdvzkiexfs/settings/api-keys/legacy";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
+  
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  
+  
   // 1. SELECTOR HOOKS & BASE VARIABLES
   const maleBtn = document.getElementById("gender-male");
   const femaleBtn = document.getElementById("gender-female");
@@ -80,16 +86,47 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3. MOCK ONLINE DATABASE LAYER
   async function dbFetchUserData(email) {
     if (!email) return null;
-    const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
-    return registeredUsersMap[email.toLowerCase()] || null;
+    try {
+      const { data, error } = await supabase
+        .from('wardrobe_users_db') // References your cloud credentials table
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+
+      if (error) {
+        console.error("Database query failed:", error.message);
+        return null;
+      }
+      return data; // Returns the user profile object (firstName, password, avatar string)
+    } catch (err) {
+      console.error("Network connectivity exception:", err);
+      return null;
+    }
   }
 
   async function dbSaveNewUser(email, userDataProfile) {
-    const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
-    registeredUsersMap[email.toLowerCase()] = userDataProfile;
-    localStorage.setItem("wardrobe_users_db", JSON.stringify(registeredUsersMap));
-    return { success: true };
+    try {
+      const { error } = await supabase
+        .from('wardrobe_users_db')
+        .insert([{
+          email: email.toLowerCase(),
+          first_name: userDataProfile.firstName,
+          password: userDataProfile.password, // Standard plaintext for testing; hash in production
+          avatar_data_url: userDataProfile.avatar || ""
+        }]);
+
+      if (error) {
+        console.error("Database storage failed:", error.message);
+        alert(`Cloud Error: ${error.message}`);
+        return { success: false };
+      }
+      return { success: true };
+    } catch (err) {
+      console.error("Network injection exception:", err);
+      return { success: false };
+    }
   }
+
 
   // 4. AUTHENTICATION SYSTEMS
   if (toggleLoginViewBtn && toggleRegisterViewBtn && loginForm && registerForm) {
@@ -351,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const waistColor = waistColorEl ? waistColorEl.value : "";
     const shoeColor = shoeColorEl ? shoeColorEl.value : "";
     const overallColor = overallColorEl ? overallColorEl.value : "";
-    
+
     // 3. Fetch your personal wardrobe database snapshot from local memory storage
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "";
     const currentCatalogue = JSON.parse(localStorage.getItem(`wardrobe_catalogue_db_${activeSessionEmail}`)) || {};

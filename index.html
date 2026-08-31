@@ -105,6 +105,7 @@
               <select id="male-waist" class="wardrobe-select">
                 <option value="">-- Choose a Waist Style --</option>
                 <option value="shorts">Shorts</option>
+                <option value="jean">Jeans /Jean</option>
                 <option value="trousers">Trousers</option>
               </select>
             </div>
@@ -112,7 +113,7 @@
               <label for="male-fabric">Waist Fabric:</label>
               <select id="male-fabric" class="wardrobe-select">
                 <option value="">-- Choose a Fabric --</option>
-                <option value="jeans">Jeans</option>
+                <option value="jean">Jeans</option>
                 <option value="cotton">Cotton</option>
               </select>
             </div>
@@ -131,6 +132,7 @@
                 <option value="">-- Choose an Outer Layer --</option>
                 <option value="none">None</option>
                 <option value="suit">Suit</option>
+                <option value="jacket">Jacket</option>
               </select>
             </div>
           </div>
@@ -145,11 +147,39 @@
                 <option value="red">Red</option>
                 <option value="blue">Blue</option>
                 <option value="yellow">Yellow</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
               </select>
             </div>
             <div class="select-group">
-              <label for="male-other-color">Other Categories Color:</label>
-              <select id="male-other-color">
+              <label for="male-overall-color">Overall Color:</label>
+              <select id="male-overall-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+                <option value="blue">Blue</option>
+                <option value="red">Red</option>
+              </select>
+            </div>
+
+            <div class="select-group">
+              <label for="male-waist-color">Waist Color:</label>
+              <select id="male-waist-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+                <option value="blue">Blue</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="male-shoe-color">Shoe Color:</label>
+              <select id="male-shoe-color">
                 <option value="">-- Select Color --</option>
                 <option value="black">Black</option>
                 <option value="white">White</option>
@@ -179,7 +209,7 @@
               <label for="female-waist">Waist Categories:</label>
               <select id="female-waist" class="wardrobe-select">
                 <option value="">-- Choose a Waist Style --</option>
-                <option value="jean">Jean</option>
+                <option value="jean">Jeans/ Jean</option>
                 <option value="cotton-trouser">Cotton Trouser</option>
                 <option value="skirt">Skirt</option>
               </select>
@@ -214,16 +244,47 @@
                 <option value="red">Red</option>
                 <option value="blue">Blue</option>
                 <option value="yellow">Yellow</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
               </select>
             </div>
             <div class="select-group">
-              <label for="female-other-color">Other Categories Color:</label>
-              <select id="female-other-color">
+              <label for="female-waist-color">Waist Color:</label>
+              <select id="female-waist-color">
                 <option value="">-- Select Color --</option>
                 <option value="black">Black</option>
                 <option value="white">White</option>
                 <option value="grey">Grey</option>
                 <option value="brown">Brown</option>
+                <option value="blue">Blue</option>
+              </select>
+            </div>
+            <!-- 🟢 Split Out: Shoe Specific Color Selection -->
+            <div class="select-group">
+              <label for="female-shoe-color">Shoe Color:</label>
+              <select id="female-shoe-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+                <option value="brown">Red</option>
+                <option value="brown">Pink</option>
+                <option value="brown">Green</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="female-overall-color">Overall Color:</label>
+              <select id="female-overall-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+                <option value="blue">Blue</option>
+                <option value="red">Red</option>
               </select>
             </div>
           </div>
@@ -363,6 +424,9 @@
       </main>
 
     </div>
+
+    <script src="https://jsdelivr.net"></script>
+
     <script src="script.js"></script>
 
     <button id="chat-toggle-widget" class="floating-chat-icon" aria-label="Open Community Chat Room">
