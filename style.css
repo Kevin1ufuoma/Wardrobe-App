@@ -1,0 +1,964 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  height: 100vh;
+  overflow: cubic bezier;
+  overflow-x: hidden;
+}
+
+/* Base side-by-side flex layout wrapper split rules */
+.app-layout-wrapper {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Left side navigation option controls */
+.planning-aside-sidebar {
+  width: 320px;
+  min-width: 320px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-height: 100vh;
+  overflow-y: scroll;
+}
+
+.sidebar-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.sidebar-header p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Right main canvas frame section rules */
+.main-display-canvas {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  gap: 30px;
+}
+
+.app-header {
+  text-align: center;
+}
+
+.app-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-top: 5px;
+}
+
+/* Sidebar Option Select Lists Configurations */
+.category-vertical-stack, .color-picker-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.select-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.select-group select {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  font-size: 0.95rem;
+  outline: none;
+  width: 100%;
+  color: #334155;
+}
+
+.select-group select:focus {
+  border-color: #0f172a;
+}
+
+.wardrobe-panel h3 {
+  font-size: 1.1rem;
+  color: #0f172a;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+/* Save Outfit Action Sidebar Button Layout */
+.save-outfit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #0284c7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.2s ease;
+}
+
+.save-outfit-btn:hover {
+  background-color: #0369a1;
+}
+
+/*ONBOARDING CONTROLS FOR THE MAIN CENTER VIEWPORT*/
+.onboarding-container {
+  width: 100%;
+  max-width: 500px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.onboarding-container h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.gender-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.gender-btn {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.gender-btn:hover {
+  background-color: #f8fafc;
+}
+
+.gender-btn.active {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+/* File input field style map bounds */
+.upload-box {
+  border: 2px dashed #cbd5e1;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  background-color: #f8fafc;
+  transition: border-color 0.2s;
+}
+
+.upload-box:hover {
+  border-color: #0f172a;
+}
+
+.upload-box p {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.upload-box input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Central carousel viewport element maps */
+.carousel-container {
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+
+/* Enable smooth sliding inside the carousel wrapper track */
+.carousel-track-wrapper {
+  overflow: hidden;
+  width: 100%;
+  border-radius: 12px;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%;
+}
+
+.carousel-slide {
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 350px;
+  background-color: #edf2f7;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.overlay {
+  position: absolute;
+  color: #e2e8f0;
+}
+
+
+/* Column Flex Alignment Rules */
+.canvas-item-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.canvas-clothing-layer {
+  font-size: 0.85rem !important;
+  font-weight: 600;
+  color: #334155;
+  padding: 8px 4px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.canvas-clothing-layer.active-selection {
+  background: #0f172a;
+  color: #ffffff;
+  border-style: solid;
+  border-color: #0f172a;
+  transform: scale(1.02);
+}
+
+.overlay-canvas-hint {
+  position: absolute;
+  bottom: 12px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
+
+/* Week Agenda Planner Framework Section */
+.week-planner-container {
+  width: 100%;
+  max-width: 500px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.week-planner-container h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+
+.days-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.day-select-btn {
+  flex: 1;
+  padding: 10px 4px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.day-select-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* State tracker indicator mapping styles */
+.day-select-btn.active-day {
+  background-color: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.2);
+}
+
+/* Reset Week Action Button Layout Styles */
+.reset-action-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background-color 0.2s ease;
+}
+
+.reset-action-btn:hover {
+  background-color: #dc2626;
+}
+
+
+/* The floating side circle button lock */
+.floating-chat-icon {
+  position: fixed;
+  right: 25px;
+  bottom: 30px;
+  width: 75px;
+  height: 75px;
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-chat-icon:hover {
+  transform: scale(1.1);
+  background-color: #1e293b;
+}
+
+.widget-subtext {
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: block;
+  margin-top: 2px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  line-height: 1;
+}
+
+/* Slide-out Panel Overlay Shell */
+.chat-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 360px;
+  height: 100vh;
+  background-color: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+#community-chat-room {
+  background-color: #f8fafc;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: -15px 0 30px rgba(15, 23, 42, 0.08);
+  border-left: 1px solid #e2e8f0;
+}
+
+/* Header structural elements alignment mapping */
+.chat-panel-header {
+  padding: 22px 20px;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0f172a;
+  color: white;
+}
+
+.chat-panel-header h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-close-x {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.chat-close-x:hover {
+  background: rgba(220, 38, 38, 0.2);
+  color: #ef4444;
+}
+
+/* Community Look Feed Stream Display Scopes */
+.chat-feed-logs {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.community-look-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.02), 0 2px 4px -1px rgba(15, 23, 42, 0.01);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.community-look-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.05);
+}
+
+.card-author-line {
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  color: #1e293b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-author-line strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.card-timestamp {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  float: none;
+}
+
+.community-look-card img {
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.card-outfit-image-placeholder {
+  width: 100%;
+  height: 160px;
+  background-color: #edf2f7;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 8px 0;
+}
+
+.card-caption {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #475569;
+  margin-top: 10px;
+}
+
+.card-actions-bar {
+  margin-top: 14px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  display: flex;
+  gap: 16px;
+}
+
+.card-actions-bar button {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.card-actions-bar button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.card-like-btn.liked {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* Message creator docking input parameters footer mapping */
+.chat-input-footer-dock {
+  padding: 18px 20px;
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.03);
+}
+
+.chat-upload-row {
+  margin-bottom: 8px;
+}
+
+.chat-upload-row input[type="file"] {
+  display: none;
+}
+
+.chat-attach-lbl {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0284c7;
+  background: #f0f9ff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e0f2fe;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.chat-attach-lbl:hover {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.chat-message-row {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-message-row textarea {
+  flex: 1;
+  height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+  resize: none;
+  outline: none;
+}
+
+.chat-message-row textarea:focus {
+  background-color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05);
+}
+
+.chat-submit-btn {
+  padding: 0 18px;
+  height: 42px;
+  background-color: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: -0.01em;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.chat-submit-btn:hover {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+
+/* Hide application interface by default until verification passes */
+.app-layout-wrapper {
+  display: none !important;
+}
+
+.app-layout-wrapper.authenticated {
+  display: flex !important;
+}
+
+/* Authentication Screen Frame Structural Mechanics */
+.auth-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #f1f5f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.auth-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 32px;
+  border: 1px solid #e2e8f0;
+}
+
+.auth-nav {
+  display: flex;
+  border-bottom: 2px solid #f1f5f9;
+  margin-bottom: 24px;
+}
+
+.auth-tab-btn {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.auth-tab-btn.active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+
+.auth-form-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-form-box h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.registration-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Optional Custom Avatar Uploader Form Elements Style Sets */
+.avatar-setting-trigger {
+  position: relative;
+  font-size: 1.35rem;
+  cursor: pointer;
+  background: #f1f5f9;
+  padding: 6px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.avatar-setting-trigger:hover {
+  background: #e2e8f0;
+}
+
+.avatar-setting-trigger input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.hidden-preview-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin: 0 auto;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #0284c7;
+}
+
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-field-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.input-field-group input {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.input-field-group input:focus {
+  border-color: #0f172a;
+}
+
+.auth-action-submit-btn {
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* --- SIDEBAR ACTIVE USER PROFILE IDENTITY CARD STYLES --- */
+.user-identity-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.identity-flex {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #cbd5e1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.identity-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-welcome-label {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+#user-display-name {
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.signout-action-btn {
+  background: #fff;
+  border: 1px solid #fca5a5;
+  color: #ef4444;
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.signout-action-btn:hover {
+  background: #fef2f2;
+}
+
+
+@media (max-width: 540px) {
+  #outfit-canvas-view {
+    flex-direction: column !important;
+    gap: 12px !important;
+    height: auto !important;
+  }
+
+  .canvas-item-column {
+    width: 100%;
+  }
+
+  #outfit-canvas-view img {
+    height: 120px !important;
+  }
+}
+
+
+/* Mobile Media Query for displays up to 768px */
+@media (max-width: 768px) {
+
+  /* Stack layout layers on top of each other */
+  .app-layout-wrapper {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Make main display take full screen priority */
+  .main-display-canvas {
+    width: 100%;
+    padding: 20px;
+    gap: 20px;
+  }
+
+  /* Transform Sidebar into an Off-Canvas Contextual Slide Drawer */
+  .planning-aside-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 290px;
+    min-width: 290px;
+    height: 100vh;
+    z-index: 300;
+    box-shadow: 10px 0 25px rgba(0, 0, 0, 0.15);
+    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Toggle class to slide the drawer into visibility */
+  .planning-aside-sidebar.drawer-open {
+    left: 0;
+  }
+
+  /* Add an inner Close action item area for standard mobile accessibility */
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  /* Inject close utility button styles */
+  .close-sidebar-btn {
+    background: #f1f5f9;
+    border: none;
+    font-size: 1.1rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #475569;
+  }
+}

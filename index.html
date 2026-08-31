@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wardrobe Assistant App</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <!-- AUTHENTICATION GATEWAY SCREENS -->
+    <div id="auth-gateway" class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-nav">
+          <button id="toggle-login-view" class="auth-tab-btn active">Sign In</button>
+          <button id="toggle-register-view" class="auth-tab-btn">Create Account</button>
+        </div>
+    
+        <!-- 1. SIGN IN FORM -->
+        <form id="login-form" class="auth-form-box">
+          <h2>Welcome Back</h2>
+          <div class="input-field-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" required placeholder="name@example.com">
+          </div>
+          <div class="input-field-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="auth-action-submit-btn">Login to Wardrobe</button>
+        </form>
+    
+        <!-- 2. REGISTRATION FORM -->
+        <form id="register-form" class="auth-form-box" style="display: none;">
+          <div class="registration-title-row">
+            <h2>Join Community</h2>
+            <div class="avatar-setting-trigger" title="Upload custom profile photo (Optional)">
+              ⚙️
+              <input type="file" id="user-avatar-upload" accept="image/*">
+            </div>
+          </div>
+    
+          <div id="avatar-preview-badge" class="hidden-preview-badge" style="display: none;"></div>
+    
+          <div class="input-field-group">
+            <label for="reg-firstname">First Name</label>
+            <input type="text" id="reg-firstname" required placeholder="Alex">
+          </div>
+          <div class="input-field-group">
+            <label for="reg-email">Email Address</label>
+            <input type="email" id="reg-email" required placeholder="name@example.com">
+          </div>
+          <div class="input-field-group">
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" required placeholder="Create password">
+          </div>
+          <button type="submit" class="auth-action-submit-btn">Register Account</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Global Layout Wrapper (Side-by-Side Flex Layout) -->
+    <div class="app-layout-wrapper">
+      
+      <!-- LEFT SIDEBAR: Pure Wardrobe Configuration Panels -->
+      <aside class="planning-aside-sidebar">
+        
+        <div id="user-profile-badge-card">
+          
+          <div class="identity-flex">
+          
+            <div id="user-avatar-display" class="user-avatar-circle">👤</div>
+            
+            <div class="identity-meta">
+              <span class="user-welcome-label">Hello,</span>
+              <strong id="user-display-name">Guest User</strong>
+            </div>
+          
+          </div>
+          
+          <button id="app-signout-action-btn" class="signout-action-btn">🛑 Sign Out</button>
+        </div>
+
+
+        <header class="sidebar-header">
+          <h2>Outfit Planner</h2>
+          <p id="active-day-heading">Selected Day: None (Choose below)</p>
+        </header>
+
+        <!-- MALE SELECTIONS DRAWER -->
+        <div id="male-wardrobe" class="wardrobe-panel" style="display: none;">
+          <h3>Man's Wardrobe</h3>
+          <div class="category-vertical-stack">
+            <div class="select-group">
+              <label for="male-tops">Top Categories:</label>
+              <select id="male-tops" class="wardrobe-select">
+                <option value="">-- Choose a Top --</option>
+                <option value="long-sleeves">Long Sleeves</option>
+                <option value="short-sleeves">Short Sleeves</option>
+                <option value="t-shirts">T-Shirts</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="male-waist">Waist Categories:</label>
+              <select id="male-waist" class="wardrobe-select">
+                <option value="">-- Choose a Waist Style --</option>
+                <option value="shorts">Shorts</option>
+                <option value="trousers">Trousers</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="male-fabric">Waist Fabric:</label>
+              <select id="male-fabric" class="wardrobe-select">
+                <option value="">-- Choose a Fabric --</option>
+                <option value="jeans">Jeans</option>
+                <option value="cotton">Cotton</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="male-shoes">Shoe Categories:</label>
+              <select id="male-shoes" class="wardrobe-select">
+                <option value="">-- Choose Shoes --</option>
+                <option value="sneakers">Sneakers</option>
+                <option value="corporate">Corporate Shoes</option>
+                <option value="sandals">Sandals</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="male-overall">Overall Layer:</label>
+              <select id="male-overall" class="wardrobe-select">
+                <option value="">-- Choose an Outer Layer --</option>
+                <option value="none">None</option>
+                <option value="suit">Suit</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- MALE COLOR PICKER -->
+          <div id="male-color-section" class="color-picker-box" style="display: none;">
+            <h4>🎨 Color Mapping</h4>
+            <div class="select-group">
+              <label for="male-top-color">Top Color (Primary):</label>
+              <select id="male-top-color">
+                <option value="">-- Select Color --</option>
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="male-other-color">Other Categories Color:</label>
+              <select id="male-other-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+              </select>
+            </div>
+          </div>
+          <button class="save-outfit-btn" id="save-male-outfit">💾 Save Male Outfit</button>
+        </div>
+
+        <!-- FEMALE SELECTIONS DRAWER -->
+        <div id="female-wardrobe" class="wardrobe-panel" style="display: none;">
+          <h3>Woman's Wardrobe</h3>
+          <div class="category-vertical-stack">
+            <div class="select-group">
+              <label for="female-tops">Top Categories:</label>
+              <select id="female-tops" class="wardrobe-select">
+                <option value="">-- Choose a Top --</option>
+                <option value="blouse">Blouse</option>
+                <option value="t-shirt">T-Shirt</option>
+                <option value="long-sleeves">Long Sleeves</option>
+                <option value="short-sleeves">Short Sleeves</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="female-waist">Waist Categories:</label>
+              <select id="female-waist" class="wardrobe-select">
+                <option value="">-- Choose a Waist Style --</option>
+                <option value="jean">Jean</option>
+                <option value="cotton-trouser">Cotton Trouser</option>
+                <option value="skirt">Skirt</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="female-overall">Overall Layer:</label>
+              <select id="female-overall" class="wardrobe-select">
+                <option value="">-- Choose an Outer Layer --</option>
+                <option value="none">None</option>
+                <option value="suit">Suit</option>
+                <option value="dress">Dress</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="female-shoes">Shoe Categories:</label>
+              <select id="female-shoes" class="wardrobe-select">
+                <option value="">-- Choose Shoes --</option>
+                <option value="corporate">Corporate Shoes</option>
+                <option value="sandals">Sandals</option>
+                <option value="sneakers">Sneakers</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- FEMALE COLOR PICKER -->
+          <div id="female-color-section" class="color-picker-box" style="display: none;">
+            <h4>🎨 Color Mapping</h4>
+            <div class="select-group">
+              <label for="female-top-color">Top Color (Primary):</label>
+              <select id="female-top-color">
+                <option value="">-- Select Color --</option>
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="female-other-color">Other Categories Color:</label>
+              <select id="female-other-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+              </select>
+            </div>
+          </div>
+          <button class="save-outfit-btn" id="save-female-outfit">💾 Save Female Outfit</button>
+        </div>
+      </aside>
+
+      <!-- RIGHT EXPANDED WORKSPACE AREA: Main Content Canvas Section -->
+      <main class="main-display-canvas">
+        <header class="app-header">
+          <h1>Let's plan your outfit for the week</h1>
+          <p class="subtitle">Get styled like the boss you are.</p>
+        </header>
+
+        <!-- 1. Dynamic Outfit Preview Canvas Window (Columns Layout Grid) -->
+        <section class="carousel-container">
+          <div class="carousel-track-wrapper">
+            <div id="carousel-track" class="carousel-track">
+              <div class="carousel-slide">
+                <!-- Grid layout container wrapper -->
+                <div class="image-placeholder" id="outfit-canvas-view"
+                  style="display: flex; flex-direction: row; justify-content: space-around; gap: 16px; padding: 24px; min-height: 380px; align-items: stretch;">
+        
+                  <!-- Column 1: Tops Component -->
+                  <div class="canvas-item-column">
+                    <img id="canvas-top-img"
+                      style="display: none; width: 100%; height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 8px;" />
+                    <div id="canvas-top-layer" class="canvas-clothing-layer">👔 Top Choice</div>
+                  </div>
+        
+                  <!-- Column 2: Waists Component -->
+                  <div class="canvas-item-column">
+                    <img id="canvas-bottom-img"
+                      style="display: none; width: 100%; height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 8px;" />
+                    <div id="canvas-bottom-layer" class="canvas-clothing-layer">👖 Waist Choice</div>
+                  </div>
+        
+                  <!-- Column 3: Shoes Component -->
+                  <div class="canvas-item-column">
+                    <img id="canvas-shoe-img"
+                      style="display: none; width: 100%; height: 220px; object-fit: contain; border-radius: 8px; margin-bottom: 8px;" />
+                    <div id="canvas-shoe-layer" class="canvas-clothing-layer">👟 Shoe Choice</div>
+                  </div>
+        
+                  <p class="overlay-canvas-hint"
+                    style="position: absolute; bottom: 12px; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Your Style Blueprint</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+
+        <!-- 3. Profile & Upload Onboarding Box -->
+        <section class="onboarding-container">
+          <div class="gender-selection">
+            <h3>1. Set Your Style Profile</h3>
+            <div class="gender-buttons">
+              <button class="gender-btn" id="gender-male" data-gender="male">👨 Male Wardrobe</button>
+              <button class="gender-btn" id="gender-female" data-gender="female">👩 Female Wardrobe</button>
+            </div>
+          </div>
+
+          <div class="upload-container">
+            <h3>2. File a New Clothing Purchase to Catalogue</h3>
+            <div class="upload-form-inputs" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;">
+          
+              <!-- 1. Gender Domain Target -->
+              <select id="upload-item-gender" style="padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <option value="male">👨 For Men's Catalogue</option>
+                <option value="female">👩 For Women's Catalogue</option>
+              </select>
+          
+              <!-- 2. Type Category (Unified Context Mapping) -->
+              <select id="upload-item-type" style="padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <optgroup label="Tops Category">
+                  <option value="long-sleeves">Long Sleeves</option>
+                  <option value="short-sleeves">Short Sleeves</option>
+                  <option value="t-shirts">T-Shirts</option>
+                  <option value="blouse">Blouse</option>
+                </optgroup>
+                <optgroup label="Waist Style">
+                  <option value="shorts">Shorts</option>
+                  <option value="trousers">Trousers / Cotton Trouser</option>
+                  <option value="jeans">Jeans / Jean</option>
+                  <option value="skirt">Skirt</option>
+                </optgroup>
+                <optgroup label="Shoe Category">
+                  <option value="corporate">Corporate Shoes</option>
+                  <option value="sandals">Sandals</option>
+                  <option value="sneakers">Sneakers / Trainers</option>
+                  <option value="high-heels">High Heels</option>
+                </optgroup>
+                <optgroup label="Overall Selection Layer">
+                  <option value="suit">Full-Suit / Suit</option>
+                  <option value="jacket">Jacket</option>
+                  <option value="dress">Dress / Gown</option>
+                </optgroup>
+              </select>
+          
+              <!-- 3. Explicit Color Assignment Picker -->
+              <select id="upload-item-color" style="padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+              </select>
+            </div>
+          
+            <div class="upload-box">
+              <input type="file" id="wear-upload" accept="image/*" />
+              <p>📸 Click or drag image elements here to catalogue your wear item.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 👇 2. NEW HOUSING LAYER: Days of the week agenda scheduling deck 👇 -->
+        <section class="week-planner-container">
+          <h2>Let's select your wears for the week</h2>
+          <div class="days-timeline-row">
+            <button class="day-select-btn" data-day="monday">📅 Mon</button>
+            <button class="day-select-btn" data-day="tuesday">📅 Tue</button>
+            <button class="day-select-btn" data-day="wednesday">📅 Wed</button>
+            <button class="day-select-btn" data-day="thursday">📅 Thu</button>
+            <button class="day-select-btn" data-day="friday">📅 Fri</button>
+          </div>
+          <button id="reset-week-btn" class="reset-action-btn">🗑️ Clear / Reset Current Week</button>
+
+        </section>
+
+
+      </main>
+
+    </div>
+    <script src="script.js"></script>
+
+    <button id="chat-toggle-widget" class="floating-chat-icon" aria-label="Open Community Chat Room">
+      💬 <small class="widget-subtext">Share your look</small>
+    </button>
+
+    <!-- 2. SOCIAL COMMUNITY CHAT ROOM SLIDE-OUT PANEL -->
+    <aside id="community-chat-room" class="chat-drawer-panel" style="display: none;">
+      <header class="chat-panel-header">
+        <h3>🌐 Community Lookbook</h3>
+        <button id="close-chat-btn" class="chat-close-x">✕</button>
+      </header>
+
+      <!-- Feed Viewport Room where shared outfits populate -->
+      <div id="chat-feed-viewport" class="chat-feed-logs">
+        <!-- Sample Shared Look Card Placeholder -->
+        <div class="community-look-card">
+          <div class="card-author-line">
+            <strong>Alex K.</strong> <span class="card-timestamp">Today, 2:15 PM</span>
+          </div>
+          <div class="card-outfit-image-placeholder">
+            👗 Saturday Vibe Look Placeholder
+          </div>
+          <p class="card-caption">Planning this clean setup for a brunch date tomorrow! What do we think?</p>
+          
+          <!-- Interactive Counters Metric Bar -->
+          <div class="card-actions-bar">
+            <button class="card-like-btn" onclick="this.classList.toggle('liked')">❤️ Like (<span class="like-num">4</span>)</button>
+            <button class="card-comment-trigger-btn">💬 Comment</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shared Look Creator / Input Controls Panel Section -->
+      <footer class="chat-input-footer-dock">
+        <div class="chat-upload-row">
+          <label for="chat-look-upload" class="chat-attach-lbl">📸 Attach Look</label>
+          <input type="file" id="chat-look-upload" accept="image/*" />
+        </div>
+        <div class="chat-message-row">
+          <textarea id="chat-message-input" placeholder="Say something about your style blueprint..."></textarea>
+          <button id="send-look-btn" class="chat-submit-btn">Publish</button>
+        </div>
+      </footer>
+    </aside>
+
+  </body>
+    
+</html>
