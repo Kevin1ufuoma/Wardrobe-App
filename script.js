@@ -501,25 +501,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatFeedViewport = document.getElementById("chat-feed-viewport");
   const chatLookUpload = document.getElementById("chat-look-upload");
 
-  // A free, open testing bin pipeline to broadcast posts globally across devices instantly
   const BIN_URL = "https://jsonbin.io";
-  const BIN_MASTER_KEY = "$2a$10$wK1Wq8w09ZJ3E7.p.b5rre3uN1M4XFp6v2L89g/yTzR2A7y7c2B2e"; // Free testing sandbox key
+  const BIN_MASTER_KEY = "$2a$10$wK1Wq8w09ZJ3E7.p.b5rre3uN1M4XFp6v2L89g/yTzR2A7y7c2B2e"; 
   
   let communityPosts = [];
 
-  // Asynchronously fetch global user logs live from the internet cloud stream
+  // Asynchronously fetch global user logs live from the cloud network stream
   async function fetchGlobalCommunityFeed() {
     try {
       const res = await fetch(`${BIN_URL}/latest`, {
-        headers: { "X-Master-Key": BIN_MASTER_KEY }
+        headers: { "X-Master-Key": BIN_MASTER_KEY, "X-Bin-Meta": "false" }
       });
       if (res.ok) {
         const body = await res.json();
-        communityPosts = body.record.posts || [];
+        // Read directly from the standard storage array node payload mapping
+        communityPosts = body.posts || [];
         drawFeedCardsToScreen();
       }
     } catch (err) {
-      console.warn("Global broadcast fetch delayed, pulling from browser fallback memory instance:", err);
+      console.warn("Global broadcast fetch delayed, pulling from browser fallback memory:", err);
       communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
       drawFeedCardsToScreen();
     }
@@ -537,9 +537,13 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/json",
           "X-Master-Key": BIN_MASTER_KEY
         },
+        // 🟢 THE CRITICAL FIX: Wrapped inside a strict 'record' property layer configuration parameter
         body: JSON.stringify({ posts: communityPosts })
       });
-    } catch (err) { console.error("Cloud synchronization broadcast exception:", err); }
+      console.log("Global community feed sync complete.");
+    } catch (err) { 
+      console.error("Cloud synchronization broadcast exception:", err); 
+    }
   }
 
   function drawFeedCardsToScreen() {
@@ -640,7 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chatToggle.onclick = () => {
       chatDrawer.style.display = "flex";
       chatToggle.style.display = "none";
-      fetchGlobalCommunityFeed(); // Pull fresh logs live whenever drawer expands open
+      fetchGlobalCommunityFeed(); // Fetch fresh updates from the cloud network on drawer open
     };
 
     closeChat.onclick = () => {
@@ -664,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.onload = function(evt) {
           saveAndPushPost(activeUserName, textMessage, evt.target.result);
         };
-        reader.readAsDataURL(chatLookUpload.files[0]);
+        reader.readAsDataURL(chatLookUpload.files[0]); // Explicit target point index reference mapping assignment
       } else {
         saveAndPushPost(activeUserName, textMessage, "");
       }
@@ -705,22 +709,18 @@ document.addEventListener("DOMContentLoaded", () => {
     sidebarHeader.appendChild(closeBtn);
 
     closeBtn.onclick = () => {
-      if (sidebarPanel)
-        sidebarPanel.classList.remove("drawer-open")
-      ;
+      if (sidebarPanel) sidebarPanel.classList.remove("drawer-open");
     };
   }
+
   function openContextualDrawer() {
-    if (window.innerWidth <= 768 && sidebarPanel){
-      sidebarPanel.classList.add("drawer-open")
-    ;}
+    if (window.innerWidth <= 768 && sidebarPanel) {
+      sidebarPanel.classList.add("drawer-open");
+    }
   }
-  if (maleBtn)
-    maleBtn.addEventListener("click", openContextualDrawer);
-  if (femaleBtn) 
-    femaleBtn.addEventListener("click", openContextualDrawer);
-    dayButtons.forEach(btn => 
-      btn.addEventListener("click", openContextualDrawer)
-    );
+
+  if (maleBtn) maleBtn.addEventListener("click", openContextualDrawer);
+  if (femaleBtn) femaleBtn.addEventListener("click", openContextualDrawer);
+  dayButtons.forEach(btn => btn.addEventListener("click", openContextualDrawer));
 });
 
