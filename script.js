@@ -490,8 +490,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // ==========================================
-  // 8. COMMUNITY CHAT DRAWER LOGIC (GLOBAL STABILIZED BROADCAST ENGINE)
+    // ==========================================
+  // 8. COMMUNITY CHAT DRAWER LOGIC (SUPABASE CLOUD SYNC ENGINE)
   // ==========================================
   const chatToggle = document.getElementById("chat-toggle-widget");
   const chatDrawer = document.getElementById("community-chat-room");
@@ -501,43 +501,55 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatFeedViewport = document.getElementById("chat-feed-viewport");
   const chatLookUpload = document.getElementById("chat-look-upload");
 
-  // Global Sandbox Bin Setup
-  const BIN_URL = "https://jsonbin.io";
-  const BIN_MASTER_KEY = "$2a$10$wK1Wq8w09ZJ3E7.p.b5rre3uN1M4XFp6v2L89g/yTzR2A7y7c2B2e"; 
-  
   let communityPosts = [];
 
+  // 🟢 FETCH FRESH LOOKS LIVE FROM CLOUD TABLES
   async function fetchGlobalCommunityFeed() {
-    try {
-      const res = await fetch(`${BIN_URL}/latest`, {
-        headers: { "X-Master-Key": BIN_MASTER_KEY, "X-Bin-Meta": "false" }
-      });
-      if (res.ok) {
-        const body = await res.json();
-        communityPosts = body.posts || [];
-        drawFeedCardsToScreen();
-      }
-    } catch (err) {
-      console.warn("Pulling fallback logs:");
-      communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
-      drawFeedCardsToScreen();
+    if (useCloudDB && supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('community_posts')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          // Re-map column properties to match frontend card variables
+          communityPosts = data.map(item => ({
+            id: item.id,
+            author: item.author_name,
+            time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            caption: item.caption,
+            image: item.image_url,
+            likes: item.likes_count,
+            likedByArray: item.liked_by_array || [],
+            comments: item.comments_json || []
+          }));
+          drawFeedCardsToScreen();
+          return;
+        }
+      } catch (err) { console.warn("Supabase feed error, using local memory:"); }
     }
+    communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
+    drawFeedCardsToScreen();
   }
 
-  async function syncFeedToGlobalCloudNetwork() {
+  // 🟢 SAVE COMMENTS & LIKES UPSTREAM TO THE SERVER INSTANTLY
+  async function syncFeedToGlobalCloudNetwork(index, updatedPostObj) {
     localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
     drawFeedCardsToScreen();
-    
-    try {
-      await fetch(BIN_URL, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": BIN_MASTER_KEY
-        },
-        body: JSON.stringify({ posts: communityPosts })
-      });
-    } catch (err) { console.error("Sync error:", err); }
+
+    if (useCloudDB && supabaseClient && updatedPostObj.id) {
+      try {
+        await supabaseClient
+          .from('community_posts')
+          .update({
+            likes_count: updatedPostObj.likes,
+            liked_by_array: updatedPostObj.likedByArray,
+            comments_json: updatedPostObj.comments
+          })
+          .eq('id', updatedPostObj.id);
+      } catch (err) { console.error("Cloud push failed:", err); }
+    }
   }
 
   function drawFeedCardsToScreen() {
@@ -580,7 +592,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${imageTag}
         <p class="card-caption">${post.caption}</p>
         <div class="card-actions-bar">
-          <button class="card-like-btn ${viewerHasLiked ? 'liked' : ''}" data-index="${index}">❤️ Like (${post.likes || 0})</button>
+          <button class="card-like-btn ${viewerHasLiked ? 'liked' : ''}" data-index="${index}">❤️ Like (<span class="like-num">${post.likes || 0}</span>)</button>
           <button class="card-comment-trigger-btn" data-index="${index}">💬 Comment</button>
         </div>
         ${commentsHTML}
@@ -600,7 +612,7 @@ document.addEventListener("DOMContentLoaded", () => {
             communityPosts[idx].likedByArray.push(activeSessionEmail);
             communityPosts[idx].likes = (communityPosts[idx].likes || 0) + 1;
           }
-          syncFeedToGlobalCloudNetwork();
+          syncFeedToGlobalCloudNetwork(idx, communityPosts[idx]);
         }
       };
     });
@@ -614,7 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const currentUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
           if (!communityPosts[idx].comments) communityPosts[idx].comments = [];
           communityPosts[idx].comments.push({ user: currentUserName, text: replyText.trim() });
-          syncFeedToGlobalCloudNetwork();
+          syncFeedToGlobalCloudNetwork(idx, communityPosts[idx]);
         }
       };
     });
@@ -629,7 +641,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (sendLookBtn && chatMessageInput) {
-    sendLookBtn.onclick = () => {
+    sendLookBtn.onclick = async () => {
       const textMessage = chatMessageInput.value.trim();
       const hasFile = chatLookUpload && chatLookUpload.files && chatLookUpload.files.length > 0;
       if (textMessage === "" && !hasFile) return;
@@ -638,25 +650,43 @@ document.addEventListener("DOMContentLoaded", () => {
       const usersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
       const activeUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
 
-      // 🟢 STABILIZATION REGEX: Handle large pictures safely without dropping connection pipelines
+      let finalImageString = "";
       if (hasFile) {
         const file = chatLookUpload.files[0];
-        if (file.size > 150 * 1024) {
-          // If the photo is large, run local reader placement to guarantee speed
-          const localUrl = URL.createObjectURL(file);
-          saveAndPushPost(activeUserName, textMessage, localUrl);
+        // Enforce compression rule on mega-base64 photos to stop pipeline dropping
+        if (file.size > 200 * 1024) {
+          finalImageString = URL.createObjectURL(file); // Render local sandbox mirror smoothly
+          saveAndPushPostToCloud(activeUserName, activeSessionEmail, textMessage, finalImageString);
         } else {
           const reader = new FileReader();
-          reader.onload = function(evt) { saveAndPushPost(activeUserName, textMessage, evt.target.result); };
+          reader.onload = function(evt) { saveAndPushPostToCloud(activeUserName, activeSessionEmail, textMessage, evt.target.result); };
           reader.readAsDataURL(file);
         }
       } else {
-        saveAndPushPost(activeUserName, textMessage, "");
+        saveAndPushPostToCloud(activeUserName, activeSessionEmail, textMessage, "");
       }
     };
   }
 
-  function saveAndPushPost(authorName, messageText, imageData) {
+  async function saveAndPushPostToCloud(authorName, authorEmail, messageText, imageData) {
+    if (useCloudDB && supabaseClient && !imageData.startsWith("blob:")) {
+      try {
+        await supabaseClient
+          .from('community_posts')
+          .insert([{
+            author_name: authorName,
+            author_email: authorEmail,
+            caption: messageText,
+            image_url: imageData
+          }]);
+        chatMessageInput.value = "";
+        if (chatLookUpload) chatLookUpload.value = "";
+        fetchGlobalCommunityFeed();
+        return;
+      } catch (err) { console.error("Cloud post sync error:", err); }
+    }
+
+    // Fallback save logic
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newPostObj = {
       author: authorName, time: `Today, ${timeString}`,
@@ -664,12 +694,14 @@ document.addEventListener("DOMContentLoaded", () => {
       likes: 0, likedByArray: [], comments: [] 
     };
     communityPosts.unshift(newPostObj);
-    syncFeedToGlobalCloudNetwork();
+    localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
     chatMessageInput.value = ""; 
     if (chatLookUpload) chatLookUpload.value = "";
+    drawFeedCardsToScreen();
   }
 
   fetchGlobalCommunityFeed();
+
 
     // ==========================================
   // 9. AUTOMATED AUDIBLE ALARM ENGINE (8PM & 4PM WAT MONITOR)
