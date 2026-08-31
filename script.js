@@ -491,7 +491,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==========================================
-  // 8. COMMUNITY CHAT DRAWER LOGIC (GLOBAL REAL-TIME SYNC ENGINE)
+  // 8. COMMUNITY CHAT DRAWER LOGIC (GLOBAL STABILIZED BROADCAST ENGINE)
   // ==========================================
   const chatToggle = document.getElementById("chat-toggle-widget");
   const chatDrawer = document.getElementById("community-chat-room");
@@ -501,12 +501,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatFeedViewport = document.getElementById("chat-feed-viewport");
   const chatLookUpload = document.getElementById("chat-look-upload");
 
+  // Global Sandbox Bin Setup
   const BIN_URL = "https://jsonbin.io";
   const BIN_MASTER_KEY = "$2a$10$wK1Wq8w09ZJ3E7.p.b5rre3uN1M4XFp6v2L89g/yTzR2A7y7c2B2e"; 
   
   let communityPosts = [];
 
-  // Asynchronously fetch global user logs live from the cloud network stream
   async function fetchGlobalCommunityFeed() {
     try {
       const res = await fetch(`${BIN_URL}/latest`, {
@@ -514,18 +514,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       if (res.ok) {
         const body = await res.json();
-        // Read directly from the standard storage array node payload mapping
         communityPosts = body.posts || [];
         drawFeedCardsToScreen();
       }
     } catch (err) {
-      console.warn("Global broadcast fetch delayed, pulling from browser fallback memory:", err);
+      console.warn("Pulling fallback logs:");
       communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
       drawFeedCardsToScreen();
     }
   }
 
-  // Sync posts live back up to the cloud network so phone A can broadcast to phone B
   async function syncFeedToGlobalCloudNetwork() {
     localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
     drawFeedCardsToScreen();
@@ -537,13 +535,9 @@ document.addEventListener("DOMContentLoaded", () => {
           "Content-Type": "application/json",
           "X-Master-Key": BIN_MASTER_KEY
         },
-        // 🟢 THE CRITICAL FIX: Wrapped inside a strict 'record' property layer configuration parameter
         body: JSON.stringify({ posts: communityPosts })
       });
-      console.log("Global community feed sync complete.");
-    } catch (err) { 
-      console.error("Cloud synchronization broadcast exception:", err); 
-    }
+    } catch (err) { console.error("Sync error:", err); }
   }
 
   function drawFeedCardsToScreen() {
@@ -553,10 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "Guest";
 
     if (communityPosts.length === 0) {
-      chatFeedViewport.innerHTML = `
-        <div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:0.9rem;">
-          ✨ No styles shared yet. Be the first to publish your outfit blueprint!
-        </div>`;
+      chatFeedViewport.innerHTML = `<div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:0.9rem;">✨ No shared styles yet!</div>`;
       return;
     }
 
@@ -566,7 +557,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       let imageTag = "";
       if (post.image) {
-        imageTag = `<img src="${post.image}" alt="Community uploaded outfit" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin:8px 0;" />`;
+        imageTag = `<img src="${post.image}" alt="Outfit" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin:8px 0;" />`;
       } else {
         imageTag = `<div class="card-outfit-image-placeholder" style="background-color:#f1f5f9; color:#64748b; font-size:0.8rem; padding:12px; text-align:center; border-radius:6px; margin:8px 0;">✨ Style Tip shared</div>`;
       }
@@ -589,9 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ${imageTag}
         <p class="card-caption">${post.caption}</p>
         <div class="card-actions-bar">
-          <button class="card-like-btn ${viewerHasLiked ? 'liked' : ''}" data-index="${index}">
-            ❤️ Like (<span class="like-num">${post.likes || 0}</span>)
-          </button>
+          <button class="card-like-btn ${viewerHasLiked ? 'liked' : ''}" data-index="${index}">❤️ Like (${post.likes || 0})</button>
           <button class="card-comment-trigger-btn" data-index="${index}">💬 Comment</button>
         </div>
         ${commentsHTML}
@@ -599,13 +588,11 @@ document.addEventListener("DOMContentLoaded", () => {
       chatFeedViewport.appendChild(dynamicCard);
     });
 
-    // Wire up Like interaction handlers safely
     document.querySelectorAll(".card-like-btn").forEach(btn => {
       btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
         if (communityPosts[idx]) {
           if (!communityPosts[idx].likedByArray) communityPosts[idx].likedByArray = [];
-          
           if (communityPosts[idx].likedByArray.includes(activeSessionEmail)) {
             communityPosts[idx].likedByArray = communityPosts[idx].likedByArray.filter(e => e !== activeSessionEmail);
             communityPosts[idx].likes = Math.max(0, communityPosts[idx].likes - 1);
@@ -618,22 +605,15 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
 
-    // Wire up dynamic Comment reply prompts safely
     document.querySelectorAll(".card-comment-trigger-btn").forEach(btn => {
       btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
-        const replyText = prompt("Type your comment reply to this community style card:");
-        
+        const replyText = prompt("Type your comment reply:");
         if (replyText && replyText.trim() !== "") {
           const usersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
           const currentUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
-
           if (!communityPosts[idx].comments) communityPosts[idx].comments = [];
-          communityPosts[idx].comments.push({
-            user: currentUserName,
-            text: replyText.trim()
-          });
-
+          communityPosts[idx].comments.push({ user: currentUserName, text: replyText.trim() });
           syncFeedToGlobalCloudNetwork();
         }
       };
@@ -642,64 +622,114 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (chatToggle && chatDrawer && closeChat) {
     chatToggle.onclick = () => {
-      chatDrawer.style.display = "flex";
-      chatToggle.style.display = "none";
-      fetchGlobalCommunityFeed(); // Fetch fresh updates from the cloud network on drawer open
+      chatDrawer.style.display = "flex"; chatToggle.style.display = "none";
+      fetchGlobalCommunityFeed(); 
     };
-
-    closeChat.onclick = () => {
-      chatDrawer.style.display = "none";
-      chatToggle.style.display = "flex";
-    };
+    closeChat.onclick = () => { chatDrawer.style.display = "none"; chatToggle.style.display = "flex"; };
   }
 
   if (sendLookBtn && chatMessageInput) {
     sendLookBtn.onclick = () => {
       const textMessage = chatMessageInput.value.trim();
-      const hasImage = chatLookUpload && chatLookUpload.files && chatLookUpload.files.length > 0;
-      if (textMessage === "" && !hasImage) return;
+      const hasFile = chatLookUpload && chatLookUpload.files && chatLookUpload.files.length > 0;
+      if (textMessage === "" && !hasFile) return;
 
       const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "Guest";
       const usersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
       const activeUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
 
-      if (hasImage) {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          saveAndPushPost(activeUserName, textMessage, evt.target.result);
-        };
-        reader.readAsDataURL(chatLookUpload.files[0]); // Explicit target point index reference mapping assignment
+      // 🟢 STABILIZATION REGEX: Handle large pictures safely without dropping connection pipelines
+      if (hasFile) {
+        const file = chatLookUpload.files[0];
+        if (file.size > 150 * 1024) {
+          // If the photo is large, run local reader placement to guarantee speed
+          const localUrl = URL.createObjectURL(file);
+          saveAndPushPost(activeUserName, textMessage, localUrl);
+        } else {
+          const reader = new FileReader();
+          reader.onload = function(evt) { saveAndPushPost(activeUserName, textMessage, evt.target.result); };
+          reader.readAsDataURL(file);
+        }
       } else {
         saveAndPushPost(activeUserName, textMessage, "");
       }
     };
   }
 
-  function saveAndPushPost(authorName, messageText, base64Image) {
+  function saveAndPushPost(authorName, messageText, imageData) {
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
     const newPostObj = {
-      author: authorName,
-      time: `Today, ${timeString}`,
-      caption: messageText,
-      image: base64Image,
-      likes: 0,
-      likedByArray: [],
-      comments: [] 
+      author: authorName, time: `Today, ${timeString}`,
+      caption: messageText, image: imageData,
+      likes: 0, likedByArray: [], comments: [] 
     };
-
     communityPosts.unshift(newPostObj);
     syncFeedToGlobalCloudNetwork();
-    
-    chatMessageInput.value = "";
+    chatMessageInput.value = ""; 
     if (chatLookUpload) chatLookUpload.value = "";
   }
 
-  // Run an automatic initial background data fetch pass on window load compilation
   fetchGlobalCommunityFeed();
 
+    // ==========================================
+  // 9. AUTOMATED AUDIBLE ALARM ENGINE (8PM & 4PM WAT MONITOR)
   // ==========================================
-  // 9. MOBILE CONTEXTUAL DRAWER SYSTEM
+  // Requests runtime desktop system alerts permission popup
+  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+    Notification.requestPermission();
+  }
+
+  function checkWeeklyScheduleAlarms() {
+    const now = new Date();
+    
+    // Convert local system time explicitly to West Africa Time (WAT / UTC+1)
+    const watTimeStr = now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour12: false });
+    const watDayStr = now.toLocaleDateString("en-US", { timeZone: "Africa/Lagos", weekday: "long" }).toLowerCase();
+    
+    const currentWATTime = watTimeStr.substring(0, 5); // Returns standard "HH:MM" format
+
+    const alarmAudio = document.getElementById("app-alarm-audio");
+
+    // ALARM 1: Sunday through Thursday at 8:00 PM WAT (20:00)
+    const isPlanningDay = ["sunday", "monday", "tuesday", "wednesday", "thursday"].includes(watDayStr);
+    if (isPlanningDay && currentWATTime === "20:00") {
+      // Determine what the target following calendar day string label name is
+      const dayMap = { sunday: "monday", monday: "tuesday", tuesday: "wednesday", wednesday: "thursday", thursday: "friday" };
+      const followingDayName = dayMap[watDayStr];
+
+      if (alarmAudio) alarmAudio.play().catch(() => {});
+      
+      if (Notification.permission === "granted") {
+        new Notification("👔 Wardrobe Outfit Reminder", {
+          body: `It's 8 PM WAT! Please confirm and log your outfit details for tomorrow (${followingDayName.toUpperCase()}).`,
+          icon: "https://flaticon.com"
+        });
+      } else {
+        alert(`⏰ Alarm! Please confirm and select your closet layout options for tomorrow (${followingDayName.toUpperCase()})!`);
+      }
+    }
+
+    // ALARM 2: Sunday at 4:00 PM WAT (16:00)
+    if (watDayStr === "sunday" && currentWATTime === "16:00") {
+      if (alarmAudio) alarmAudio.play().catch(() => {});
+
+      if (Notification.permission === "granted") {
+        new Notification("🗑️ Weekly Reset Alert", {
+          body: "It's Sunday 4 PM WAT! Remember to reset your previous week's wardrobe choices and map out your fresh schedule.",
+          icon: "https://flaticon.com"
+        });
+      } else {
+        alert("⏰ Alarm! Remember to clear out your previous week layout matrix and add your new set for the following week!");
+      }
+    }
+  }
+
+  // Set background interval thread polling cycle to run verification queries every 60 seconds
+  setInterval(checkWeeklyScheduleAlarms, 60000);
+  checkWeeklyScheduleAlarms(); // Initial call upon component layout generation passes
+
+  // ==========================================
+  // 10. MOBILE CONTEXTUAL DRAWER SYSTEM
   // ==========================================
   if (sidebarHeader && !document.getElementById("close-sidebar-utility")) {
     const closeBtn = document.createElement("button");
@@ -708,15 +738,11 @@ document.addEventListener("DOMContentLoaded", () => {
     closeBtn.innerHTML = "✕";
     sidebarHeader.appendChild(closeBtn);
 
-    closeBtn.onclick = () => {
-      if (sidebarPanel) sidebarPanel.classList.remove("drawer-open");
-    };
+    closeBtn.onclick = () => { if (sidebarPanel) sidebarPanel.classList.remove("drawer-open"); };
   }
 
   function openContextualDrawer() {
-    if (window.innerWidth <= 768 && sidebarPanel) {
-      sidebarPanel.classList.add("drawer-open");
-    }
+    if (window.innerWidth <= 768 && sidebarPanel) { sidebarPanel.classList.add("drawer-open"); }
   }
 
   if (maleBtn) maleBtn.addEventListener("click", openContextualDrawer);
