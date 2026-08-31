@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 0. INITIALIZE NETWORK & DATABASE ENVIRONMENTS
   // ==========================================
   const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_KThXfRBUgh-lDeekY8YTpQ_nz_Qev2S";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
   let supabaseClient = null;
   let useCloudDB = false;
 
