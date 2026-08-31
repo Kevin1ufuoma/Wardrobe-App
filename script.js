@@ -1,5 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // ==========================================
+  // 0. INITIALIZE NETWORK & DATABASE ENVIRONMENTS
+  // ==========================================
+  const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
+  let supabaseClient = null;
+  let useCloudDB = false;
+
+  try {
+    if (typeof supabase !== 'undefined') {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      useCloudDB = true;
+      console.log("Connected to Supabase.");
+    }
+  } catch (err) { console.warn("Using local fallback system storage."); }
+
+  // ==========================================
   // 1. SELECTOR HOOKS & BASE VARIABLES
+  // ==========================================
   const maleBtn = document.getElementById("gender-male");
   const femaleBtn = document.getElementById("gender-female");
   const malePanel = document.getElementById("male-wardrobe");
@@ -14,7 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const activeDayHeading = document.getElementById("active-day-heading");
   let activePlannedDay = ""; 
 
-  // Auth & UI Framework Shell Elements
   const authGateway = document.getElementById("auth-gateway");
   const mainAppWrapper = document.querySelector(".app-layout-wrapper");
   const loginForm = document.getElementById("login-form");
@@ -35,97 +52,113 @@ document.addEventListener("DOMContentLoaded", () => {
   let transientAvatarDataUrl = ""; 
   let weeklyOutfitsArchive = { monday: null, tuesday: null, wednesday: null, thursday: null, friday: null };
 
+  // ==========================================
   // 2. THE DYNAMIC ACCOUNT WARDROBE CATALOGUE SYSTEM
+  // ==========================================
   let wardrobeCatalogue = {};
-
   const wearUpload = document.getElementById("wear-upload");
   const uploadGender = document.getElementById("upload-item-gender");
   const uploadType = document.getElementById("upload-item-type");
   const uploadColor = document.getElementById("upload-item-color");
 
   if (wearUpload) {
-    wearUpload.addEventListener("change", (e) => {
+    // 🟢 CRITICAL TRACKING: Enforce strict single-listener bindings
+    wearUpload.onchange = (e) => {
       const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user");
-      if (!activeSessionEmail) {
-        alert("Session error! Please log in first.");
-        return;
-      }
+      if (!activeSessionEmail) { alert("Please log in first."); return; }
 
-      const file = e.target.files; 
-      if (file && file[0]) {
+      const file = e.target.files[0]; 
+      if (file) {
+        // Validation check to block illegal cross-gender uploads
+        const targetGender = uploadGender.value;
+        const targetType = uploadType.value;
+        if (targetGender === "male" && ["blouse","skirt","high-heels","dress"].includes(targetType)) {
+          alert("Error: Women's exclusive apparel parameters cannot be catalogued under male closets!");
+          wearUpload.value = ""; return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(evt) {
-          const gender = uploadGender.value;
-          const type = uploadType.value;
-          const color = uploadColor.value;
-
-          const uniqueCatalogKey = `${gender}_${type}_${color}`;
-          
-          // 🟢 FIX 1: Save data under a key unique to the active user's email address
+          const uniqueCatalogKey = `${targetGender}_${targetType}_${uploadColor.value}`;
           const dynamicUserCatalogueKey = `wardrobe_catalogue_db_${activeSessionEmail}`;
+          
           wardrobeCatalogue = JSON.parse(localStorage.getItem(dynamicUserCatalogueKey)) || {};
           wardrobeCatalogue[uniqueCatalogKey] = evt.target.result;
-          
           localStorage.setItem(dynamicUserCatalogueKey, JSON.stringify(wardrobeCatalogue));
           
-          alert(`Catalogue Updated! Successfully added 1 item under key: [${uniqueCatalogKey.toUpperCase()}]`);
+          alert(`Catalogue Updated Successfully!`);
           wearUpload.value = ""; 
           renderDynamicOutfitPreview();
         };
-        reader.readAsDataURL(file[0]);
+        reader.readAsDataURL(file);
       }
-    });
+    };
   }
 
-  // 3. MOCK ONLINE DATABASE LAYER
+  // ==========================================
+  // 3. DATABASE AUTHENTICATION HYBRID LAYER
+  // ==========================================
   async function dbFetchUserData(email) {
     if (!email) return null;
+    if (useCloudDB && supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient.from('wardrobe_users_db').select('*').eq('email', email.toLowerCase().trim()).maybeSingle();
+        if (!error && data) return data;
+      } catch (err) { console.warn("Using local snapshot lookup."); }
+    }
     const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
-    return registeredUsersMap[email.toLowerCase()] || null;
+    return registeredUsersMap[email.toLowerCase().trim()] || null;
   }
 
   async function dbSaveNewUser(email, userDataProfile) {
+    const cleanEmail = email.toLowerCase().trim();
+    if (useCloudDB && supabaseClient) {
+      try {
+        const { error } = await supabaseClient.from('wardrobe_users_db').insert([{ email: cleanEmail, first_name: userDataProfile.firstName, password: userDataProfile.password, avatar_data_url: userDataProfile.avatar || "" }]);
+        if (!error) return { success: true };
+      } catch (err) { console.warn("Using local cache fallback."); }
+    }
     const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
-    registeredUsersMap[email.toLowerCase()] = userDataProfile;
+    registeredUsersMap[cleanEmail] = userDataProfile;
     localStorage.setItem("wardrobe_users_db", JSON.stringify(registeredUsersMap));
     return { success: true };
   }
 
-  // 4. AUTHENTICATION SYSTEMS
+  // ==========================================
+  // 4. AUTHENTICATION SYSTEMS (POP-UP PROTECTION)
+  // ==========================================
   if (toggleLoginViewBtn && toggleRegisterViewBtn && loginForm && registerForm) {
-    toggleLoginViewBtn.addEventListener("click", () => {
-      toggleLoginViewBtn.classList.add("active");
-      toggleRegisterViewBtn.classList.remove("active");
-      loginForm.style.display = "flex";
-      registerForm.style.display = "none";
-    });
-
-    toggleRegisterViewBtn.addEventListener("click", () => {
-      toggleRegisterViewBtn.classList.add("active");
-      toggleLoginViewBtn.classList.remove("active");
-      registerForm.style.display = "flex";
-      loginForm.style.display = "none";
-    });
+    toggleLoginViewBtn.onclick = () => {
+      toggleLoginViewBtn.classList.add("active"); toggleRegisterViewBtn.classList.remove("active");
+      loginForm.style.display = "flex"; registerForm.style.display = "none";
+    };
+    toggleRegisterViewBtn.onclick = () => {
+      toggleRegisterViewBtn.classList.add("active"); toggleLoginViewBtn.classList.remove("active");
+      registerForm.style.display = "flex"; loginForm.style.display = "none";
+    };
   }
 
   if (avatarUploadInput && avatarPreviewBadge) {
-    avatarUploadInput.addEventListener("change", (e) => {
-      const file = e.target.files;
-      if (file && file[0]) {
+    avatarUploadInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
           transientAvatarDataUrl = evt.target.result;
           avatarPreviewBadge.style.backgroundImage = `url('${transientAvatarDataUrl}')`;
           avatarPreviewBadge.style.display = "block";
         }
-        reader.readAsDataURL(file[0]);
+        reader.readAsDataURL(file);
       }
-    });
+    };
   }
 
   if (registerForm) {
-    registerForm.addEventListener("submit", async (e) => {
+    registerForm.onsubmit = async (e) => {
       e.preventDefault();
+      const submitBtn = registerForm.querySelector(".auth-action-submit-btn");
+      if (submitBtn) submitBtn.disabled = true;
+
       const firstName = document.getElementById("reg-firstname").value.trim();
       const email = document.getElementById("reg-email").value.trim().toLowerCase();
       const password = document.getElementById("reg-password").value;
@@ -133,57 +166,60 @@ document.addEventListener("DOMContentLoaded", () => {
       const userExists = await dbFetchUserData(email);
       if (userExists) {
         alert("This email address is already connected to another profile!");
-        return;
+        if (submitBtn) submitBtn.disabled = false; return;
       }
 
       const newProfile = { firstName, password, avatar: transientAvatarDataUrl || "" };
-      await dbSaveNewUser(email, newProfile);
+      const saveResult = await dbSaveNewUser(email, newProfile);
 
-      alert("Registration complete! Please log in.");
-      registerForm.reset();
-      if (avatarPreviewBadge) avatarPreviewBadge.style.display = "none";
-      transientAvatarDataUrl = "";
-      if (toggleLoginViewBtn) toggleLoginViewBtn.click();
-    });
+      if (saveResult && saveResult.success) {
+        alert("Registration complete! Please log in.");
+        registerForm.reset();
+        if (avatarPreviewBadge) avatarPreviewBadge.style.display = "none";
+        transientAvatarDataUrl = "";
+        if (toggleLoginViewBtn) toggleLoginViewBtn.click();
+      }
+      if (submitBtn) submitBtn.disabled = false;
+    };
   }
 
   if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
+    loginForm.onsubmit = async (e) => {
       e.preventDefault();
       const email = document.getElementById("login-email").value.trim().toLowerCase();
       const password = document.getElementById("login-password").value;
 
       const userProfile = await dbFetchUserData(email);
+      const databasePassword = userProfile ? (userProfile.password) : null;
 
-      if (!userProfile || userProfile.password !== password) {
-        alert("Invalid credentials! Please try again.");
-        return;
+      if (!userProfile || databasePassword !== password) {
+        alert("Invalid credentials! Please try again."); return;
       }
 
       sessionStorage.setItem("active_wardrobe_session_user", email);
       initializeAuthenticatedSession(userProfile, email);
       loginForm.reset();
-    });
+    };
   }
 
   function initializeAuthenticatedSession(profileObj, userEmail) {
     if (authGateway) authGateway.style.display = "none";
     if (mainAppWrapper) mainAppWrapper.classList.add("authenticated");
 
-    if (userDisplayName) userDisplayName.textContent = profileObj.firstName;
+    const firstNameVal = profileObj.first_name || profileObj.firstName || "User";
+    if (userDisplayName) userDisplayName.textContent = firstNameVal;
     if (userProfileCard) userProfileCard.style.display = "flex";
 
-    if (profileObj.avatar && userAvatarDisplay) {
-      userAvatarDisplay.textContent = "";
-      userAvatarDisplay.style.backgroundImage = `url('${profileObj.avatar}')`;
+    const userAvatar = profileObj.avatar_data_url || profileObj.avatar;
+    if (userAvatar && userAvatarDisplay) {
+      userAvatarDisplay.textContent = ""; userAvatarDisplay.style.backgroundImage = `url('${userAvatar}')`;
     } else if (userAvatarDisplay) {
-      userAvatarDisplay.textContent = profileObj.firstName.charAt(0).toUpperCase();
-      userAvatarDisplay.style.backgroundImage = "none";
+      userAvatarDisplay.textContent = firstNameVal.charAt(0).toUpperCase(); userAvatarDisplay.style.backgroundImage = "none";
     }
 
     const dynamicUserCacheKey = `wardrobe_weekly_cache_${userEmail}`;
-    weeklyOutfitsArchive = JSON.parse(localStorage.getItem(dynamicUserCacheKey)) || {
-      monday: null, tuesday: null, wednesday: null, thursday: null, friday: null
+    weeklyOutfitsArchive = JSON.parse(localStorage.getItem(dynamicUserCacheKey)) || { 
+      monday: null, tuesday: null, wednesday: null, thursday: null, friday: null 
     };
     
     dayButtons.forEach(b => b.classList.remove("active-day"));
@@ -194,12 +230,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (appSignoutActionBtn) {
-    appSignoutActionBtn.addEventListener("click", () => {
+    appSignoutActionBtn.onclick = () => {
       sessionStorage.removeItem("active_wardrobe_session_user");
       if (mainAppWrapper) mainAppWrapper.classList.remove("authenticated");
       if (authGateway) authGateway.style.display = "flex";
       if (userProfileCard) userProfileCard.style.display = "none";
-    });
+    };
   }
 
   const activeUserKeyToken = sessionStorage.getItem("active_wardrobe_session_user");
@@ -209,23 +245,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
+    // ==========================================
   // 5. CENTRAL WARDROBE GENDER INTERACTION TRACK
+  // ==========================================
   if (maleBtn && femaleBtn) {
-    maleBtn.addEventListener("click", () => {
+    maleBtn.onclick = () => {
       maleBtn.classList.add("active");
       femaleBtn.classList.remove("active");
       if (malePanel) malePanel.style.display = "block";
       if (femalePanel) femalePanel.style.display = "none";
       renderDynamicOutfitPreview();
-    });
+    };
 
-    femaleBtn.addEventListener("click", () => {
+    femaleBtn.onclick = () => {
       femaleBtn.classList.add("active");
       maleBtn.classList.remove("active");
       if (femalePanel) femalePanel.style.display = "block";
       if (malePanel) malePanel.style.display = "none";
       renderDynamicOutfitPreview();
-    });
+    };
   }
 
   const saveMaleBtn = document.getElementById("save-male-outfit");
@@ -242,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dropdownSelectors.forEach(selectBox => {
       const labelElement = selectBox.previousElementSibling;
       const labelText = labelElement ? labelElement.textContent.replace(":", "").trim() : selectBox.id;
-      compiledOutfitFile.details[labelText] = selectBox.value || "Not Selected";
+      compiledOutfitFile.details[labelText] = selectBox.value || "None";
     });
 
     weeklyOutfitsArchive[activePlannedDay] = compiledOutfitFile;
@@ -255,11 +294,11 @@ document.addEventListener("DOMContentLoaded", () => {
     alert(`Success! Your look for ${activePlannedDay.toUpperCase()} has been locked.`);
   }
 
-  if (saveMaleBtn) saveMaleBtn.addEventListener("click", () => processOutfitCommit("Male", maleSelects));
-  if (saveFemaleBtn) saveFemaleBtn.addEventListener("click", () => processOutfitCommit("Female", femaleSelects));
+  if (saveMaleBtn) saveMaleBtn.onclick = () => processOutfitCommit("Male", maleSelects);
+  if (saveFemaleBtn) saveFemaleBtn.onclick = () => processOutfitCommit("Female", femaleSelects);
 
   dayButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.onclick = () => {
       dayButtons.forEach(b => b.classList.remove("active-day"));
       btn.classList.add("active-day");
       activePlannedDay = btn.getAttribute("data-day");
@@ -279,7 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const labelElement = selectBox.previousElementSibling;
             const labelText = labelElement ? labelElement.textContent.replace(":", "").trim() : selectBox.id;
             if (savedOutfit.details[labelText] !== undefined) {
-              selectBox.value = savedOutfit.details[labelText] === "Not Selected" ? "" : savedOutfit.details[labelText];
+              selectBox.value = savedOutfit.details[labelText] === "None" ? "" : savedOutfit.details[labelText];
             }
           });
         } else if (savedOutfit.gender === "Female" && femaleBtn) {
@@ -288,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const labelElement = selectBox.previousElementSibling;
             const labelText = labelElement ? labelElement.textContent.replace(":", "").trim() : selectBox.id;
             if (savedOutfit.details[labelText] !== undefined) {
-              selectBox.value = savedOutfit.details[labelText] === "Not Selected" ? "" : savedOutfit.details[labelText];
+              selectBox.value = savedOutfit.details[labelText] === "None" ? "" : savedOutfit.details[labelText];
             }
           });
         }
@@ -297,28 +336,34 @@ document.addEventListener("DOMContentLoaded", () => {
         femaleSelects.forEach(box => box.value = "");
       }
       renderDynamicOutfitPreview();
-    });
+    };
   });
 
+  // Color Section Conditionals with explicit trigger tags
   maleSelects.forEach((selectBox) => {
-    selectBox.addEventListener("change", () => {
+    selectBox.onchange = () => {
       const topChosen = document.getElementById("male-tops").value !== "";
       const waistChosen = document.getElementById("male-waist").value !== "";
       if (maleColorSection) maleColorSection.style.display = (topChosen && waistChosen) ? "block" : "none";
       renderDynamicOutfitPreview();
-    });
+    };
   });
 
   femaleSelects.forEach((selectBox) => {
-    selectBox.addEventListener("change", () => {
+    selectBox.onchange = () => {
+      // 🟢 THE FIX: Enforce color dropdown reveal if *either* a Top OR a Blouse/Gown/Dress is active
       const topChosen = document.getElementById("female-tops").value !== "";
       const waistChosen = document.getElementById("female-waist").value !== "";
-      if (femaleColorSection) femaleColorSection.style.display = (topChosen && waistChosen) ? "block" : "none";
+      const overallChosen = document.getElementById("female-overall").value !== "";
+      
+      if (femaleColorSection) {
+        femaleColorSection.style.display = ((topChosen && waistChosen) || overallChosen) ? "block" : "none";
+      }
       renderDynamicOutfitPreview();
-    });
+    };
   });
 
-    // ==========================================
+  // ==========================================
   // 6. CATALOGUE LOOKUP & MIRROR ENGINE
   // ==========================================
   const canvasTop = document.getElementById("canvas-top-layer");
@@ -335,29 +380,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const isMaleActive = malePanel && malePanel.style.display === "block";
     const gender = isMaleActive ? "male" : "female";
     
-    // 1. Read category types safely from the dropdown menus
     const topVal = document.getElementById(`${gender}-tops`) ? document.getElementById(`${gender}-tops`).value : "";
     const waistVal = document.getElementById(`${gender}-waist`) ? document.getElementById(`${gender}-waist`).value : "";
     const shoeVal = document.getElementById(`${gender}-shoes`) ? document.getElementById(`${gender}-shoes`).value : "";
     const overallVal = document.getElementById(`${gender}-overall`) ? document.getElementById(`${gender}-overall`).value : "";
     
-    // 2. Read color selections safely
-    const topColorEl = document.getElementById(`${gender}-top-color`);
-    const waistColorEl = document.getElementById(`${gender}-waist-color`);
-    const shoeColorEl = document.getElementById(`${gender}-shoe-color`);
-    const overallColorEl = document.getElementById(`${gender}-overall-color`);
+    const topColor = document.getElementById(`${gender}-top-color`) ? document.getElementById(`${gender}-top-color`).value : "";
+    const waistColor = document.getElementById(`${gender}-waist-color`) ? document.getElementById(`${gender}-waist-color`).value : "";
+    const shoeColor = document.getElementById(`${gender}-shoe-color`) ? document.getElementById(`${gender}-shoe-color`).value : "";
+    const overallColor = document.getElementById(`${gender}-overall-color`) ? document.getElementById(`${gender}-overall-color`).value : "";
 
-    const topColor = topColorEl ? topColorEl.value : "";
-    const waistColor = waistColorEl ? waistColorEl.value : "";
-    const shoeColor = shoeColorEl ? shoeColorEl.value : "";
-    const overallColor = overallColorEl ? overallColorEl.value : "";
-    
-    // 3. Fetch your personal wardrobe database snapshot from local memory storage
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "";
     const currentCatalogue = JSON.parse(localStorage.getItem(`wardrobe_catalogue_db_${activeSessionEmail}`)) || {};
 
-    // --- RENDER 1: TOP LAYER PICTURE ---
-    if (overallVal && overallVal !== "none") {
+    // 1. RENDER TOP INTERACTIVE IMAGE
+    if (overallVal && overallVal !== "") {
       const overallLookupKey = `${gender}_${overallVal}_${overallColor}`;
       if (currentCatalogue[overallLookupKey]) {
         canvasTopImg.src = currentCatalogue[overallLookupKey];
@@ -385,11 +422,9 @@ document.addEventListener("DOMContentLoaded", () => {
       canvasTop.textContent = "─ Choose a Top ─";
     }
 
-    // --- RENDER 2: WAIST LAYER PICTURE (CLEANED EXTRA FABRIC ARTIFACTS) ---
-    if (waistVal) {
-      // 🟢 THE FIX: Standardize lookups directly to the clean "gender_type_color" format with no exceptions
+    // 2. RENDER WAIST INTERACTIVE IMAGE
+    if (waistVal && !(overallVal && ["dress"].includes(overallVal))) {
       const waistLookupKey = `${gender}_${waistVal}_${waistColor}`;
-      
       if (currentCatalogue[waistLookupKey]) {
         canvasBottomImg.src = currentCatalogue[waistLookupKey];
         canvasBottomImg.style.display = "block";
@@ -402,10 +437,10 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       canvasBottomImg.style.display = "none";
       canvasBottom.style.display = "block";
-      canvasBottom.textContent = "─ Choose a Waist ─";
+      canvasBottom.textContent = overallVal === "dress" ? "👗 Gown Active" : "─ Choose a Waist ─";
     }
 
-    // --- RENDER 3: SHOE LAYER PICTURE ---
+    // 3. RENDER SHOE INTERACTIVE IMAGE
     if (shoeVal) {
       const shoeLookupKey = `${gender}_${shoeVal}_${shoeColor}`;
       if (currentCatalogue[shoeLookupKey]) {
@@ -425,11 +460,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-
+    // ==========================================
   // 7. THE WEEK DATA RESET ENGINE
+  // ==========================================
   const resetWeekBtn = document.getElementById("reset-week-btn");
   if (resetWeekBtn) {
-    resetWeekBtn.addEventListener("click", () => {
+    resetWeekBtn.onclick = () => {
       const userConfirmed = confirm("Are you sure you want to clear your entire schedule for this week?");
       if (!userConfirmed) return;
 
@@ -451,10 +487,12 @@ document.addEventListener("DOMContentLoaded", () => {
       femaleSelects.forEach(box => box.value = "");
       renderDynamicOutfitPreview();
       alert("Weekly planner cleared!");
-    });
+    };
   }
 
-  // 8. COMMUNITY CHAT DRAWER LOGIC (WITH REAL-TIME COMMENT TRACKS)
+  // ==========================================
+  // 8. COMMUNITY CHAT DRAWER LOGIC (GLOBAL REAL-TIME SYNC ENGINE)
+  // ==========================================
   const chatToggle = document.getElementById("chat-toggle-widget");
   const chatDrawer = document.getElementById("community-chat-room");
   const closeChat = document.getElementById("close-chat-btn");
@@ -463,9 +501,48 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatFeedViewport = document.getElementById("chat-feed-viewport");
   const chatLookUpload = document.getElementById("chat-look-upload");
 
-  let communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
+  // A free, open testing bin pipeline to broadcast posts globally across devices instantly
+  const BIN_URL = "https://jsonbin.io";
+  const BIN_MASTER_KEY = "$2a$10$wK1Wq8w09ZJ3E7.p.b5rre3uN1M4XFp6v2L89g/yTzR2A7y7c2B2e"; // Free testing sandbox key
+  
+  let communityPosts = [];
 
-  function renderCommunityLookFeed() {
+  // Asynchronously fetch global user logs live from the internet cloud stream
+  async function fetchGlobalCommunityFeed() {
+    try {
+      const res = await fetch(`${BIN_URL}/latest`, {
+        headers: { "X-Master-Key": BIN_MASTER_KEY }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        communityPosts = body.record.posts || [];
+        drawFeedCardsToScreen();
+      }
+    } catch (err) {
+      console.warn("Global broadcast fetch delayed, pulling from browser fallback memory instance:", err);
+      communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
+      drawFeedCardsToScreen();
+    }
+  }
+
+  // Sync posts live back up to the cloud network so phone A can broadcast to phone B
+  async function syncFeedToGlobalCloudNetwork() {
+    localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
+    drawFeedCardsToScreen();
+    
+    try {
+      await fetch(BIN_URL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": BIN_MASTER_KEY
+        },
+        body: JSON.stringify({ posts: communityPosts })
+      });
+    } catch (err) { console.error("Cloud synchronization broadcast exception:", err); }
+  }
+
+  function drawFeedCardsToScreen() {
     if (!chatFeedViewport) return;
     chatFeedViewport.innerHTML = ""; 
 
@@ -518,8 +595,9 @@ document.addEventListener("DOMContentLoaded", () => {
       chatFeedViewport.appendChild(dynamicCard);
     });
 
+    // Wire up Like interaction handlers safely
     document.querySelectorAll(".card-like-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
         if (communityPosts[idx]) {
           if (!communityPosts[idx].likedByArray) communityPosts[idx].likedByArray = [];
@@ -531,14 +609,14 @@ document.addEventListener("DOMContentLoaded", () => {
             communityPosts[idx].likedByArray.push(activeSessionEmail);
             communityPosts[idx].likes = (communityPosts[idx].likes || 0) + 1;
           }
-          localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
-          renderCommunityLookFeed();
+          syncFeedToGlobalCloudNetwork();
         }
-      });
+      };
     });
 
+    // Wire up dynamic Comment reply prompts safely
     document.querySelectorAll(".card-comment-trigger-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
         const replyText = prompt("Type your comment reply to this community style card:");
         
@@ -547,34 +625,32 @@ document.addEventListener("DOMContentLoaded", () => {
           const currentUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
 
           if (!communityPosts[idx].comments) communityPosts[idx].comments = [];
-          
           communityPosts[idx].comments.push({
             user: currentUserName,
             text: replyText.trim()
           });
 
-          localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
-          renderCommunityLookFeed();
+          syncFeedToGlobalCloudNetwork();
         }
-      });
+      };
     });
   }
 
   if (chatToggle && chatDrawer && closeChat) {
-    chatToggle.addEventListener("click", () => {
+    chatToggle.onclick = () => {
       chatDrawer.style.display = "flex";
       chatToggle.style.display = "none";
-      renderCommunityLookFeed(); 
-    });
+      fetchGlobalCommunityFeed(); // Pull fresh logs live whenever drawer expands open
+    };
 
-    closeChat.addEventListener("click", () => {
+    closeChat.onclick = () => {
       chatDrawer.style.display = "none";
       chatToggle.style.display = "flex";
-    });
+    };
   }
 
   if (sendLookBtn && chatMessageInput) {
-    sendLookBtn.addEventListener("click", () => {
+    sendLookBtn.onclick = () => {
       const textMessage = chatMessageInput.value.trim();
       const hasImage = chatLookUpload && chatLookUpload.files && chatLookUpload.files.length > 0;
       if (textMessage === "" && !hasImage) return;
@@ -592,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         saveAndPushPost(activeUserName, textMessage, "");
       }
-    });
+    };
   }
 
   function saveAndPushPost(authorName, messageText, base64Image) {
@@ -609,18 +685,18 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     communityPosts.unshift(newPostObj);
-    localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
+    syncFeedToGlobalCloudNetwork();
     
     chatMessageInput.value = "";
     if (chatLookUpload) chatLookUpload.value = "";
-    
-    renderCommunityLookFeed();
   }
 
-  renderCommunityLookFeed();
+  // Run an automatic initial background data fetch pass on window load compilation
+  fetchGlobalCommunityFeed();
 
-
+  // ==========================================
   // 9. MOBILE CONTEXTUAL DRAWER SYSTEM
+  // ==========================================
   if (sidebarHeader && !document.getElementById("close-sidebar-utility")) {
     const closeBtn = document.createElement("button");
     closeBtn.id = "close-sidebar-utility";
@@ -628,18 +704,23 @@ document.addEventListener("DOMContentLoaded", () => {
     closeBtn.innerHTML = "✕";
     sidebarHeader.appendChild(closeBtn);
 
-    closeBtn.addEventListener("click", () => {
-      if (sidebarPanel) sidebarPanel.classList.remove("drawer-open");
-    });
+    closeBtn.onclick = () => {
+      if (sidebarPanel)
+        sidebarPanel.classList.remove("drawer-open")
+      ;
+    };
   }
-
   function openContextualDrawer() {
-    if (window.innerWidth <= 768 && sidebarPanel) {
-      sidebarPanel.classList.add("drawer-open");
-    }
+    if (window.innerWidth <= 768 && sidebarPanel){
+      sidebarPanel.classList.add("drawer-open")
+    ;}
   }
-
-  if (maleBtn) maleBtn.addEventListener("click", openContextualDrawer);
-  if (femaleBtn) femaleBtn.addEventListener("click", openContextualDrawer);
-  dayButtons.forEach(btn => btn.addEventListener("click", openContextualDrawer));
+  if (maleBtn)
+    maleBtn.addEventListener("click", openContextualDrawer);
+  if (femaleBtn) 
+    femaleBtn.addEventListener("click", openContextualDrawer);
+    dayButtons.forEach(btn => 
+      btn.addEventListener("click", openContextualDrawer)
+    );
 });
+

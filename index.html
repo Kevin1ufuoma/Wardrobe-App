@@ -77,7 +77,6 @@
               <span class="user-welcome-label">Hello,</span>
               <strong id="user-display-name">Guest User</strong>
             </div>
-          
           </div>
           
           <button id="app-signout-action-btn" class="signout-action-btn">🛑 Sign Out</button>
@@ -96,7 +95,7 @@
             <div class="select-group">
               <label for="male-tops">Top Categories:</label>
               <select id="male-tops" class="wardrobe-select">
-                <option value="">-- Choose a Top --</option>
+                <option value="">None</option>
                 <option value="long-sleeves">Long Sleeves</option>
                 <option value="short-sleeves">Short Sleeves</option>
                 <option value="t-shirts">T-Shirts</option>
@@ -105,45 +104,35 @@
             <div class="select-group">
               <label for="male-waist">Waist Categories:</label>
               <select id="male-waist" class="wardrobe-select">
-                <option value="">-- Choose a Waist Style --</option>
+                <option value="">None</option>
                 <option value="shorts">Shorts</option>
-                <option value="jean">Jeans /Jean</option>
                 <option value="trousers">Trousers</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <label for="male-fabric">Waist Fabric:</label>
-              <select id="male-fabric" class="wardrobe-select">
-                <option value="">-- Choose a Fabric --</option>
-                <option value="jean">Jeans</option>
-                <option value="cotton">Cotton</option>
+                <option value="jean">Jean</option>
               </select>
             </div>
             <div class="select-group">
               <label for="male-shoes">Shoe Categories:</label>
               <select id="male-shoes" class="wardrobe-select">
-                <option value="">-- Choose Shoes --</option>
-                <option value="sneakers">Sneakers</option>
+                <option value="">None</option>
                 <option value="corporate">Corporate Shoes</option>
                 <option value="sandals">Sandals</option>
+                <option value="sneakers">Sneakers / Trainers</option>
               </select>
             </div>
             <div class="select-group">
               <label for="male-overall">Overall Layer:</label>
               <select id="male-overall" class="wardrobe-select">
-                <option value="">-- Choose an Outer Layer --</option>
-                <option value="none">None</option>
-                <option value="suit">Suit</option>
+                <option value="">None</option>
+                <option value="suit">Full-Suit / Suit</option>
                 <option value="jacket">Jacket</option>
               </select>
             </div>
           </div>
-
+        
           <!-- MALE COLOR PICKER -->
           <div id="male-color-section" class="color-picker-box" style="display: none;">
             <h4>🎨 Color Mapping</h4>
-            <div class="select-group">
-              <label for="male-top-color">Top Color (Primary):</label>
+            <div class="select-group"><label for="male-top-color">Top Color:</label>
               <select id="male-top-color">
                 <option value="">-- Select Color --</option>
                 <option value="red">Red</option>
@@ -155,8 +144,26 @@
                 <option value="brown">Brown</option>
               </select>
             </div>
-            <div class="select-group">
-              <label for="male-overall-color">Overall Color:</label>
+            <div class="select-group"><label for="male-waist-color">Waist Color:</label>
+              <select id="male-waist-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+                <option value="blue">Blue</option>
+              </select>
+            </div>
+            <div class="select-group"><label for="male-shoe-color">Shoe Color:</label>
+              <select id="male-shoe-color">
+                <option value="">-- Select Color --</option>
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+                <option value="brown">Brown</option>
+              </select>
+            </div>
+            <div class="select-group"><label for="male-overall-color">Overall Color:</label>
               <select id="male-overall-color">
                 <option value="">-- Select Color --</option>
                 <option value="black">Black</option>
@@ -167,32 +174,10 @@
                 <option value="red">Red</option>
               </select>
             </div>
-
-            <div class="select-group">
-              <label for="male-waist-color">Waist Color:</label>
-              <select id="male-waist-color">
-                <option value="">-- Select Color --</option>
-                <option value="black">Black</option>
-                <option value="white">White</option>
-                <option value="grey">Grey</option>
-                <option value="brown">Brown</option>
-                <option value="blue">Blue</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <label for="male-shoe-color">Shoe Color:</label>
-              <select id="male-shoe-color">
-                <option value="">-- Select Color --</option>
-                <option value="black">Black</option>
-                <option value="white">White</option>
-                <option value="grey">Grey</option>
-                <option value="brown">Brown</option>
-              </select>
-            </div>
           </div>
           <button class="save-outfit-btn" id="save-male-outfit">💾 Save Male Outfit</button>
         </div>
-
+        
         <!-- FEMALE SELECTIONS DRAWER -->
         <div id="female-wardrobe" class="wardrobe-panel" style="display: none;">
           <h3>Woman's Wardrobe</h3>
@@ -200,48 +185,48 @@
             <div class="select-group">
               <label for="female-tops">Top Categories:</label>
               <select id="female-tops" class="wardrobe-select">
-                <option value="">-- Choose a Top --</option>
-                <option value="blouse">Blouse</option>
-                <option value="t-shirt">T-Shirt</option>
+                <option value="">None</option>
                 <option value="long-sleeves">Long Sleeves</option>
                 <option value="short-sleeves">Short Sleeves</option>
+                <option value="t-shirts">T-Shirts</option>
+                <option value="blouse">Blouse</option>
               </select>
             </div>
             <div class="select-group">
               <label for="female-waist">Waist Categories:</label>
               <select id="female-waist" class="wardrobe-select">
-                <option value="">-- Choose a Waist Style --</option>
-                <option value="jean">Jeans/ Jean</option>
-                <option value="cotton-trouser">Cotton Trouser</option>
+                <option value="">None</option>
+                <option value="shorts">Shorts</option>
+                <option value="trousers">Trousers</option>
+                <option value="jean">Jean</option>
                 <option value="skirt">Skirt</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <label for="female-overall">Overall Layer:</label>
-              <select id="female-overall" class="wardrobe-select">
-                <option value="">-- Choose an Outer Layer --</option>
-                <option value="none">None</option>
-                <option value="suit">Suit</option>
-                <option value="dress">Dress</option>
               </select>
             </div>
             <div class="select-group">
               <label for="female-shoes">Shoe Categories:</label>
               <select id="female-shoes" class="wardrobe-select">
-                <option value="">-- Choose Shoes --</option>
+                <option value="">None</option>
                 <option value="corporate">Corporate Shoes</option>
                 <option value="sandals">Sandals</option>
-                <option value="sneakers">Sneakers</option>
+                <option value="sneakers">Sneakers / Trainers</option>
+                <option value="high-heels">High Heels</option>
+              </select>
+            </div>
+            <div class="select-group">
+              <label for="female-overall">Overall Layer:</label>
+              <select id="female-overall" class="wardrobe-select">
+                <option value="">None</option>
+                <option value="suit">Full-Suit / Suit</option>
+                <option value="jacket">Jacket</option>
+                <option value="dress">Dress / Gown</option>
               </select>
             </div>
           </div>
-
+        
           <!-- FEMALE COLOR PICKER -->
           <div id="female-color-section" class="color-picker-box" style="display: none;">
             <h4>🎨 Color Mapping</h4>
-            <div class="select-group">
-              <label for="female-top-color">Top Color (Primary):</label>
-              <select id="female-top-color">
+            <div class="select-group"><label for="female-top-color">Top Color:</label><select id="female-top-color">
                 <option value="">-- Select Color --</option>
                 <option value="red">Red</option>
                 <option value="blue">Blue</option>
@@ -250,36 +235,23 @@
                 <option value="white">White</option>
                 <option value="grey">Grey</option>
                 <option value="brown">Brown</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <label for="female-waist-color">Waist Color:</label>
-              <select id="female-waist-color">
+              </select></div>
+            <div class="select-group"><label for="female-waist-color">Waist Color:</label><select id="female-waist-color">
                 <option value="">-- Select Color --</option>
                 <option value="black">Black</option>
                 <option value="white">White</option>
                 <option value="grey">Grey</option>
                 <option value="brown">Brown</option>
                 <option value="blue">Blue</option>
-              </select>
-            </div>
-            <!-- 🟢 Split Out: Shoe Specific Color Selection -->
-            <div class="select-group">
-              <label for="female-shoe-color">Shoe Color:</label>
-              <select id="female-shoe-color">
+              </select></div>
+            <div class="select-group"><label for="female-shoe-color">Shoe Color:</label><select id="female-shoe-color">
                 <option value="">-- Select Color --</option>
                 <option value="black">Black</option>
                 <option value="white">White</option>
                 <option value="grey">Grey</option>
                 <option value="brown">Brown</option>
-                <option value="brown">Red</option>
-                <option value="brown">Pink</option>
-                <option value="brown">Green</option>
-              </select>
-            </div>
-            <div class="select-group">
-              <label for="female-overall-color">Overall Color:</label>
-              <select id="female-overall-color">
+              </select></div>
+            <div class="select-group"><label for="female-overall-color">Overall Color:</label><select id="female-overall-color">
                 <option value="">-- Select Color --</option>
                 <option value="black">Black</option>
                 <option value="white">White</option>
@@ -287,8 +259,7 @@
                 <option value="brown">Brown</option>
                 <option value="blue">Blue</option>
                 <option value="red">Red</option>
-              </select>
-            </div>
+              </select></div>
           </div>
           <button class="save-outfit-btn" id="save-female-outfit">💾 Save Female Outfit</button>
         </div>
@@ -373,13 +344,13 @@
                 <optgroup label="Waist Style">
                   <option value="shorts">Shorts</option>
                   <option value="trousers">Trousers / Cotton Trouser</option>
-                  <option value="jeans">Jeans / Jean</option>
+                  <option value="jeans">Jean</option>
                   <option value="skirt">Skirt</option>
                 </optgroup>
                 <optgroup label="Shoe Category">
                   <option value="corporate">Corporate Shoes</option>
                   <option value="sandals">Sandals</option>
-                  <option value="sneakers">Sneakers / Trainers</option>
+                  <option value="sneakers">Sneakers</option>
                   <option value="high-heels">High Heels</option>
                 </optgroup>
                 <optgroup label="Overall Selection Layer">
