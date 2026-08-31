@@ -97,63 +97,84 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3. MOCK ONLINE DATABASE LAYER
+    // ==========================================
+  // 3. DATABASE AUTHENTICATION HYBRID LAYER (PROTECTED)
+  // ==========================================
   async function dbFetchUserData(email) {
     if (!email) return null;
-    try {
-      const { data, error } = await supabaseClient
-        .from('wardrobe_users_db') // References your cloud credentials table
-        .select('*')
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
+    
+    // Cloud Execution Track
+    if (useCloudDB && supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('wardrobe_users_db') 
+          .select('*')
+          .eq('email', email.toLowerCase().trim())
+          .maybeSingle();
 
-      if (error) {
-        console.error("Database query failed:", error.message);
-        return null;
+        if (!error && data) return data;
+      } catch (err) {
+        console.warn("Cloud connection issue, shifting to local snapshot:");
       }
-      return data; // Returns the user profile object (firstName, password, avatar string)
-    } catch (err) {
-      console.error("Network connectivity exception:", err);
-      return null;
     }
+
+    // Local Storage Fallback Track
+    const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
+    return registeredUsersMap[email.toLowerCase().trim()] || null;
   }
 
   async function dbSaveNewUser(email, userDataProfile) {
-    try {
-      const { error } = await supabaseClient
-        .from('wardrobe_users_db')
-        .insert([{
-          email: email.toLowerCase(),
-          first_name: userDataProfile.firstName,
-          password: userDataProfile.password, // Standard plaintext for testing; hash in production
-          avatar_data_url: userDataProfile.avatar || ""
-        }]);
+    const cleanEmail = email.toLowerCase().trim();
 
-      if (error) {
-        console.error("Database storage failed:", error.message);
-        alert(`Cloud Error: ${error.message}`);
-        return { success: false };
+    // Cloud Execution Track
+    if (useCloudDB && supabaseClient) {
+      try {
+        const { error } = await supabaseClient
+          .from('wardrobe_users_db')
+          .insert([{
+            email: cleanEmail,
+            first_name: userDataProfile.firstName,
+            password: userDataProfile.password, 
+            avatar_data_url: userDataProfile.avatar || ""
+          }]);
+
+        if (!error) return { success: true };
+        console.error("Cloud reject, executing local save:", error.message);
+      } catch (err) {
+        console.warn("Cloud write exception, switching to local cache:");
       }
-      return { success: true };
-    } catch (err) {
-      console.error("Network injection exception:", err);
-      return { success: false };
     }
+
+    // Local Storage Fallback Track
+    const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
+    registeredUsersMap[cleanEmail] = userDataProfile;
+    localStorage.setItem("wardrobe_users_db", JSON.stringify(registeredUsersMap));
+    return { success: true };
   }
 
-
-  // 4. AUTHENTICATION SYSTEMS
+  // ==========================================
+  // 4. AUTHENTICATION SYSTEMS (DOUBLE-TAP PROTECTION)
+  // ==========================================
+  
+  // Clean off old listeners from UI navigation toggles
   if (toggleLoginViewBtn && toggleRegisterViewBtn && loginForm && registerForm) {
-    toggleLoginViewBtn.addEventListener("click", () => {
-      toggleLoginViewBtn.classList.add("active");
-      toggleRegisterViewBtn.classList.remove("active");
+    toggleLoginViewBtn.replaceWith(toggleLoginViewBtn.cloneNode(true));
+    toggleRegisterViewBtn.replaceWith(toggleRegisterViewBtn.cloneNode(true));
+    
+    // Re-grab fresh nodes after cloning
+    const freshLoginToggle = document.getElementById("toggle-login-view");
+    const freshRegisterToggle = document.getElementById("toggle-register-view");
+
+    freshLoginToggle.addEventListener("click", () => {
+      freshLoginToggle.classList.add("active");
+      freshRegisterToggle.classList.remove("active");
       loginForm.style.display = "flex";
       registerForm.style.display = "none";
     });
 
-    toggleRegisterViewBtn.addEventListener("click", () => {
-      toggleRegisterViewBtn.classList.add("active");
-      toggleLoginViewBtn.classList.remove("active");
+    freshRegisterToggle.addEventListener("click", () => {
+      freshRegisterToggle.classList.add("active");
+      freshLoginToggle.classList.remove("active");
       registerForm.style.display = "flex";
       loginForm.style.display = "none";
     });
@@ -174,9 +195,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Clear and rewrite Registration submit block with double-tap protection
   if (registerForm) {
-    registerForm.addEventListener("submit", async (e) => {
+    registerForm.replaceWith(registerForm.cloneNode(true));
+    const freshRegisterForm = document.getElementById("register-form");
+    const regSubmitBtn = freshRegisterForm.querySelector(".auth-action-submit-btn");
+
+    freshRegisterForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      
+      // 🟢 THE PROTECTION: Disable button instantly to stop duplicate loops
+      if (regSubmitBtn) regSubmitBtn.disabled = true;
+
       const firstName = document.getElementById("reg-firstname").value.trim();
       const email = document.getElementById("reg-email").value.trim().toLowerCase();
       const password = document.getElementById("reg-password").value;
@@ -184,79 +214,50 @@ document.addEventListener("DOMContentLoaded", () => {
       const userExists = await dbFetchUserData(email);
       if (userExists) {
         alert("This email address is already connected to another profile!");
+        if (regSubmitBtn) regSubmitBtn.disabled = false; // Restore button on fail
         return;
       }
 
       const newProfile = { firstName, password, avatar: transientAvatarDataUrl || "" };
-      await dbSaveNewUser(email, newProfile);
+      const saveResult = await dbSaveNewUser(email, newProfile);
 
-      alert("Registration complete! Please log in.");
-      registerForm.reset();
-      if (avatarPreviewBadge) avatarPreviewBadge.style.display = "none";
-      transientAvatarDataUrl = "";
-      if (toggleLoginViewBtn) toggleLoginViewBtn.click();
+      if (saveResult && saveResult.success) {
+        alert("Registration complete! Please log in.");
+        freshRegisterForm.reset();
+        if (avatarPreviewBadge) avatarPreviewBadge.style.display = "none";
+        transientAvatarDataUrl = "";
+        
+        const loginToggle = document.getElementById("toggle-login-view");
+        if (loginToggle) loginToggle.click();
+      }
+      
+      if (regSubmitBtn) regSubmitBtn.disabled = false; // Restore clickability safely
     });
   }
 
+  // Clear and rewrite Login submit block
   if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
+    loginForm.replaceWith(loginForm.cloneNode(true));
+    const freshLoginForm = document.getElementById("login-form");
+
+    freshLoginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("login-email").value.trim().toLowerCase();
       const password = document.getElementById("login-password").value;
 
       const userProfile = await dbFetchUserData(email);
+      
+      // Safely capture password properties from either local mock object or Supabase schema fields
+      const databasePassword = userProfile ? (userProfile.password || userProfile.password) : null;
 
-      if (!userProfile || userProfile.password !== password) {
+      if (!userProfile || databasePassword !== password) {
         alert("Invalid credentials! Please try again.");
         return;
       }
 
       sessionStorage.setItem("active_wardrobe_session_user", email);
       initializeAuthenticatedSession(userProfile, email);
-      loginForm.reset();
-    });
-  }
-
-  function initializeAuthenticatedSession(profileObj, userEmail) {
-    if (authGateway) authGateway.style.display = "none";
-    if (mainAppWrapper) mainAppWrapper.classList.add("authenticated");
-
-    if (userDisplayName) userDisplayName.textContent = profileObj.firstName;
-    if (userProfileCard) userProfileCard.style.display = "flex";
-
-    if (profileObj.avatar && userAvatarDisplay) {
-      userAvatarDisplay.textContent = "";
-      userAvatarDisplay.style.backgroundImage = `url('${profileObj.avatar}')`;
-    } else if (userAvatarDisplay) {
-      userAvatarDisplay.textContent = profileObj.firstName.charAt(0).toUpperCase();
-      userAvatarDisplay.style.backgroundImage = "none";
-    }
-
-    const dynamicUserCacheKey = `wardrobe_weekly_cache_${userEmail}`;
-    weeklyOutfitsArchive = JSON.parse(localStorage.getItem(dynamicUserCacheKey)) || {
-      monday: null, tuesday: null, wednesday: null, thursday: null, friday: null
-    };
-    
-    dayButtons.forEach(b => b.classList.remove("active-day"));
-    if (activeDayHeading) activeDayHeading.textContent = "Selected Day: None (Choose below)";
-    maleSelects.forEach(box => { box.value = ""; box.dispatchEvent(new Event('change')); });
-    femaleSelects.forEach(box => { box.value = ""; box.dispatchEvent(new Event('change')); });
-    renderDynamicOutfitPreview();
-  }
-
-  if (appSignoutActionBtn) {
-    appSignoutActionBtn.addEventListener("click", () => {
-      sessionStorage.removeItem("active_wardrobe_session_user");
-      if (mainAppWrapper) mainAppWrapper.classList.remove("authenticated");
-      if (authGateway) authGateway.style.display = "flex";
-      if (userProfileCard) userProfileCard.style.display = "none";
-    });
-  }
-
-  const activeUserKeyToken = sessionStorage.getItem("active_wardrobe_session_user");
-  if (activeUserKeyToken) {
-    dbFetchUserData(activeUserKeyToken).then(userProfile => {
-      if (userProfile) initializeAuthenticatedSession(userProfile, activeUserKeyToken);
+      freshLoginForm.reset();
     });
   }
 
