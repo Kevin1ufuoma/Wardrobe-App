@@ -1,24 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
-  
-  let supabaseClient = null;
-  let useCloudDB = false;
-
-  try {
-    // 🟢 THE CRITICAL VARIABLE FIX: CDN assigns to lowercase 'supabase' object
-    if (typeof supabase !== 'undefined') {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      useCloudDB = true;
-      console.log("🟢 Connected to Supabase Cloud Database successfully.");
-    } else {
-      console.warn("⚠️ Supabase CDN not loaded yet. Falling back to local storage environment mode.");
-    }
-  } catch (err) {
-    console.error("🔴 Supabase init crashed. Activation fallback engaged:", err);
-  }
-  
-  
   // 1. SELECTOR HOOKS & BASE VARIABLES
   const maleBtn = document.getElementById("gender-male");
   const femaleBtn = document.getElementById("gender-female");
@@ -97,84 +77,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-    // ==========================================
-  // 3. DATABASE AUTHENTICATION HYBRID LAYER (PROTECTED)
-  // ==========================================
+  // 3. MOCK ONLINE DATABASE LAYER
   async function dbFetchUserData(email) {
     if (!email) return null;
-    
-    // Cloud Execution Track
-    if (useCloudDB && supabaseClient) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('wardrobe_users_db') 
-          .select('*')
-          .eq('email', email.toLowerCase().trim())
-          .maybeSingle();
-
-        if (!error && data) return data;
-      } catch (err) {
-        console.warn("Cloud connection issue, shifting to local snapshot:");
-      }
-    }
-
-    // Local Storage Fallback Track
     const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
-    return registeredUsersMap[email.toLowerCase().trim()] || null;
+    return registeredUsersMap[email.toLowerCase()] || null;
   }
 
   async function dbSaveNewUser(email, userDataProfile) {
-    const cleanEmail = email.toLowerCase().trim();
-
-    // Cloud Execution Track
-    if (useCloudDB && supabaseClient) {
-      try {
-        const { error } = await supabaseClient
-          .from('wardrobe_users_db')
-          .insert([{
-            email: cleanEmail,
-            first_name: userDataProfile.firstName,
-            password: userDataProfile.password, 
-            avatar_data_url: userDataProfile.avatar || ""
-          }]);
-
-        if (!error) return { success: true };
-        console.error("Cloud reject, executing local save:", error.message);
-      } catch (err) {
-        console.warn("Cloud write exception, switching to local cache:");
-      }
-    }
-
-    // Local Storage Fallback Track
     const registeredUsersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
-    registeredUsersMap[cleanEmail] = userDataProfile;
+    registeredUsersMap[email.toLowerCase()] = userDataProfile;
     localStorage.setItem("wardrobe_users_db", JSON.stringify(registeredUsersMap));
     return { success: true };
   }
 
-  // ==========================================
-  // 4. AUTHENTICATION SYSTEMS (DOUBLE-TAP PROTECTION)
-  // ==========================================
-  
-  // Clean off old listeners from UI navigation toggles
+  // 4. AUTHENTICATION SYSTEMS
   if (toggleLoginViewBtn && toggleRegisterViewBtn && loginForm && registerForm) {
-    toggleLoginViewBtn.replaceWith(toggleLoginViewBtn.cloneNode(true));
-    toggleRegisterViewBtn.replaceWith(toggleRegisterViewBtn.cloneNode(true));
-    
-    // Re-grab fresh nodes after cloning
-    const freshLoginToggle = document.getElementById("toggle-login-view");
-    const freshRegisterToggle = document.getElementById("toggle-register-view");
-
-    freshLoginToggle.addEventListener("click", () => {
-      freshLoginToggle.classList.add("active");
-      freshRegisterToggle.classList.remove("active");
+    toggleLoginViewBtn.addEventListener("click", () => {
+      toggleLoginViewBtn.classList.add("active");
+      toggleRegisterViewBtn.classList.remove("active");
       loginForm.style.display = "flex";
       registerForm.style.display = "none";
     });
 
-    freshRegisterToggle.addEventListener("click", () => {
-      freshRegisterToggle.classList.add("active");
-      freshLoginToggle.classList.remove("active");
+    toggleRegisterViewBtn.addEventListener("click", () => {
+      toggleRegisterViewBtn.classList.add("active");
+      toggleLoginViewBtn.classList.remove("active");
       registerForm.style.display = "flex";
       loginForm.style.display = "none";
     });
@@ -195,18 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Clear and rewrite Registration submit block with double-tap protection
   if (registerForm) {
-    registerForm.replaceWith(registerForm.cloneNode(true));
-    const freshRegisterForm = document.getElementById("register-form");
-    const regSubmitBtn = freshRegisterForm.querySelector(".auth-action-submit-btn");
-
-    freshRegisterForm.addEventListener("submit", async (e) => {
+    registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      
-      // 🟢 THE PROTECTION: Disable button instantly to stop duplicate loops
-      if (regSubmitBtn) regSubmitBtn.disabled = true;
-
       const firstName = document.getElementById("reg-firstname").value.trim();
       const email = document.getElementById("reg-email").value.trim().toLowerCase();
       const password = document.getElementById("reg-password").value;
@@ -214,50 +133,79 @@ document.addEventListener("DOMContentLoaded", () => {
       const userExists = await dbFetchUserData(email);
       if (userExists) {
         alert("This email address is already connected to another profile!");
-        if (regSubmitBtn) regSubmitBtn.disabled = false; // Restore button on fail
         return;
       }
 
       const newProfile = { firstName, password, avatar: transientAvatarDataUrl || "" };
-      const saveResult = await dbSaveNewUser(email, newProfile);
+      await dbSaveNewUser(email, newProfile);
 
-      if (saveResult && saveResult.success) {
-        alert("Registration complete! Please log in.");
-        freshRegisterForm.reset();
-        if (avatarPreviewBadge) avatarPreviewBadge.style.display = "none";
-        transientAvatarDataUrl = "";
-        
-        const loginToggle = document.getElementById("toggle-login-view");
-        if (loginToggle) loginToggle.click();
-      }
-      
-      if (regSubmitBtn) regSubmitBtn.disabled = false; // Restore clickability safely
+      alert("Registration complete! Please log in.");
+      registerForm.reset();
+      if (avatarPreviewBadge) avatarPreviewBadge.style.display = "none";
+      transientAvatarDataUrl = "";
+      if (toggleLoginViewBtn) toggleLoginViewBtn.click();
     });
   }
 
-  // Clear and rewrite Login submit block
   if (loginForm) {
-    loginForm.replaceWith(loginForm.cloneNode(true));
-    const freshLoginForm = document.getElementById("login-form");
-
-    freshLoginForm.addEventListener("submit", async (e) => {
+    loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("login-email").value.trim().toLowerCase();
       const password = document.getElementById("login-password").value;
 
       const userProfile = await dbFetchUserData(email);
-      
-      // Safely capture password properties from either local mock object or Supabase schema fields
-      const databasePassword = userProfile ? (userProfile.password || userProfile.password) : null;
 
-      if (!userProfile || databasePassword !== password) {
+      if (!userProfile || userProfile.password !== password) {
         alert("Invalid credentials! Please try again.");
         return;
       }
 
       sessionStorage.setItem("active_wardrobe_session_user", email);
       initializeAuthenticatedSession(userProfile, email);
-      freshLoginForm.reset();
+      loginForm.reset();
+    });
+  }
+
+  function initializeAuthenticatedSession(profileObj, userEmail) {
+    if (authGateway) authGateway.style.display = "none";
+    if (mainAppWrapper) mainAppWrapper.classList.add("authenticated");
+
+    if (userDisplayName) userDisplayName.textContent = profileObj.firstName;
+    if (userProfileCard) userProfileCard.style.display = "flex";
+
+    if (profileObj.avatar && userAvatarDisplay) {
+      userAvatarDisplay.textContent = "";
+      userAvatarDisplay.style.backgroundImage = `url('${profileObj.avatar}')`;
+    } else if (userAvatarDisplay) {
+      userAvatarDisplay.textContent = profileObj.firstName.charAt(0).toUpperCase();
+      userAvatarDisplay.style.backgroundImage = "none";
+    }
+
+    const dynamicUserCacheKey = `wardrobe_weekly_cache_${userEmail}`;
+    weeklyOutfitsArchive = JSON.parse(localStorage.getItem(dynamicUserCacheKey)) || {
+      monday: null, tuesday: null, wednesday: null, thursday: null, friday: null
+    };
+    
+    dayButtons.forEach(b => b.classList.remove("active-day"));
+    if (activeDayHeading) activeDayHeading.textContent = "Selected Day: None (Choose below)";
+    maleSelects.forEach(box => { box.value = ""; box.dispatchEvent(new Event('change')); });
+    femaleSelects.forEach(box => { box.value = ""; box.dispatchEvent(new Event('change')); });
+    renderDynamicOutfitPreview();
+  }
+
+  if (appSignoutActionBtn) {
+    appSignoutActionBtn.addEventListener("click", () => {
+      sessionStorage.removeItem("active_wardrobe_session_user");
+      if (mainAppWrapper) mainAppWrapper.classList.remove("authenticated");
+      if (authGateway) authGateway.style.display = "flex";
+      if (userProfileCard) userProfileCard.style.display = "none";
+    });
+  }
+
+  const activeUserKeyToken = sessionStorage.getItem("active_wardrobe_session_user");
+  if (activeUserKeyToken) {
+    dbFetchUserData(activeUserKeyToken).then(userProfile => {
+      if (userProfile) initializeAuthenticatedSession(userProfile, activeUserKeyToken);
     });
   }
 
@@ -403,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const waistColor = waistColorEl ? waistColorEl.value : "";
     const shoeColor = shoeColorEl ? shoeColorEl.value : "";
     const overallColor = overallColorEl ? overallColorEl.value : "";
-
+    
     // 3. Fetch your personal wardrobe database snapshot from local memory storage
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "";
     const currentCatalogue = JSON.parse(localStorage.getItem(`wardrobe_catalogue_db_${activeSessionEmail}`)) || {};
