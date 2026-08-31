@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 0. INITIALIZE NETWORK & DATABASE ENVIRONMENTS
   // ==========================================
   const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
+  const SUPABASE_ANON_KEY = "sb_publishable_KThXfRBUgh-lDeekY8YTpQ_nz_Qev2S";
   let supabaseClient = null;
   let useCloudDB = false;
 
@@ -727,7 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ALARM 1: Sunday through Thursday at 8:00 PM WAT onwards (Hour >= 20)
     const isPlanningDay = ["sunday", "monday", "tuesday", "wednesday", "thursday"].includes(watDayStr);
-    if (isPlanningDay && currentHour >= 20 && lastTriggeredDate8PM !== watDateKey) {
+    if (isPlanningDay && currentHour >= 23 && lastTriggeredDate8PM !== watDateKey) {
       const dayMap = { sunday: "monday", monday: "tuesday", tuesday: "wednesday", wednesday: "thursday", thursday: "friday" };
       const followingDayName = dayMap[watDayStr];
 
@@ -762,7 +762,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Poll validation metrics every 15 seconds to ensure accuracy
   setInterval(checkWeeklyScheduleAlarms, 15000);
-  
+
 
   // ==========================================
   // 10. MOBILE CONTEXTUAL DRAWER SYSTEM
