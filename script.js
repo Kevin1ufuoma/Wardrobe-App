@@ -491,7 +491,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
     // ==========================================
-  // 8. COMMUNITY CHAT DRAWER LOGIC (SUPABASE CLOUD SYNC ENGINE)
+  // 8. COMMUNITY CHAT DRAWER LOGIC (SUPABASE DIRECT SYNC)
   // ==========================================
   const chatToggle = document.getElementById("chat-toggle-widget");
   const chatDrawer = document.getElementById("community-chat-room");
@@ -503,53 +503,54 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let communityPosts = [];
 
-  // 🟢 FETCH FRESH LOOKS LIVE FROM CLOUD TABLES
   async function fetchGlobalCommunityFeed() {
-    if (useCloudDB && supabaseClient) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('community_posts')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (!error && data) {
-          // Re-map column properties to match frontend card variables
-          communityPosts = data.map(item => ({
-            id: item.id,
-            author: item.author_name,
-            time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            caption: item.caption,
-            image: item.image_url,
-            likes: item.likes_count,
-            likedByArray: item.liked_by_array || [],
-            comments: item.comments_json || []
-          }));
-          drawFeedCardsToScreen();
-          return;
-        }
-      } catch (err) { console.warn("Supabase feed error, using local memory:"); }
+    if (!supabaseClient) {
+      if (chatFeedViewport) chatFeedViewport.innerHTML = `<div style="color:red; text-align:center; padding:20px;">⚠️ API Configuration Error: Supabase credentials are missing at the top of script.js</div>`;
+      return;
     }
-    communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
-    drawFeedCardsToScreen();
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('community_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Fetch error:", error.message);
+        return;
+      }
+
+      if (data) {
+        communityPosts = data.map(item => ({
+          id: item.id,
+          author: item.author_name,
+          time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          caption: item.caption,
+          image: item.image_url,
+          likes: item.likes_count,
+          likedByArray: item.liked_by_array || [],
+          comments: item.comments_json || []
+        }));
+        drawFeedCardsToScreen();
+      }
+    } catch (err) {
+      console.error("Global stream network failure:", err);
+    }
   }
 
-  // 🟢 SAVE COMMENTS & LIKES UPSTREAM TO THE SERVER INSTANTLY
   async function syncFeedToGlobalCloudNetwork(index, updatedPostObj) {
-    localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
-    drawFeedCardsToScreen();
-
-    if (useCloudDB && supabaseClient && updatedPostObj.id) {
-      try {
-        await supabaseClient
-          .from('community_posts')
-          .update({
-            likes_count: updatedPostObj.likes,
-            liked_by_array: updatedPostObj.likedByArray,
-            comments_json: updatedPostObj.comments
-          })
-          .eq('id', updatedPostObj.id);
-      } catch (err) { console.error("Cloud push failed:", err); }
-    }
+    if (!supabaseClient || !updatedPostObj.id) return;
+    try {
+      await supabaseClient
+        .from('community_posts')
+        .update({
+          likes_count: updatedPostObj.likes,
+          liked_by_array: updatedPostObj.likedByArray,
+          comments_json: updatedPostObj.comments
+        })
+        .eq('id', updatedPostObj.id);
+      drawFeedCardsToScreen();
+    } catch (err) { console.error("Cloud write sync issue:", err); }
   }
 
   function drawFeedCardsToScreen() {
@@ -559,7 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "Guest";
 
     if (communityPosts.length === 0) {
-      chatFeedViewport.innerHTML = `<div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:0.9rem;">✨ No shared styles yet!</div>`;
+      chatFeedViewport.innerHTML = `<div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:0.9rem;">✨ No styles shared yet. Send a message to start the global feed!</div>`;
       return;
     }
 
@@ -635,6 +636,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (chatToggle && chatDrawer && closeChat) {
     chatToggle.onclick = () => {
       chatDrawer.style.display = "flex"; chatToggle.style.display = "none";
+      // 🟢 THE INTENT: Grant permissions safely within a valid click handler context frame
+      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
       fetchGlobalCommunityFeed(); 
     };
     closeChat.onclick = () => { chatDrawer.style.display = "none"; chatToggle.style.display = "flex"; };
@@ -646,6 +651,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const hasFile = chatLookUpload && chatLookUpload.files && chatLookUpload.files.length > 0;
       if (textMessage === "" && !hasFile) return;
 
+      if (!supabaseClient) {
+        alert("Cannot publish post. Supabase credentials are missing at the top of script.js");
+        return;
+      }
+
       const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "Guest";
       const usersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
       const activeUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
@@ -653,112 +663,106 @@ document.addEventListener("DOMContentLoaded", () => {
       let finalImageString = "";
       if (hasFile) {
         const file = chatLookUpload.files[0];
-        // Enforce compression rule on mega-base64 photos to stop pipeline dropping
         if (file.size > 200 * 1024) {
-          finalImageString = URL.createObjectURL(file); // Render local sandbox mirror smoothly
-          saveAndPushPostToCloud(activeUserName, activeSessionEmail, textMessage, finalImageString);
+          finalImageString = URL.createObjectURL(file);
+          // Insert text globally to cloud, appending local picture tracking attributes
+          await insertPostToSupabaseTable(activeUserName, activeSessionEmail, textMessage, finalImageString);
         } else {
           const reader = new FileReader();
-          reader.onload = function(evt) { saveAndPushPostToCloud(activeUserName, activeSessionEmail, textMessage, evt.target.result); };
+          reader.onload = async function(evt) { 
+            await insertPostToSupabaseTable(activeUserName, activeSessionEmail, textMessage, evt.target.result); 
+          };
           reader.readAsDataURL(file);
         }
       } else {
-        saveAndPushPostToCloud(activeUserName, activeSessionEmail, textMessage, "");
+        await insertPostToSupabaseTable(activeUserName, activeSessionEmail, textMessage, "");
       }
     };
   }
 
-  async function saveAndPushPostToCloud(authorName, authorEmail, messageText, imageData) {
-    if (useCloudDB && supabaseClient && !imageData.startsWith("blob:")) {
-      try {
-        await supabaseClient
-          .from('community_posts')
-          .insert([{
-            author_name: authorName,
-            author_email: authorEmail,
-            caption: messageText,
-            image_url: imageData
-          }]);
-        chatMessageInput.value = "";
-        if (chatLookUpload) chatLookUpload.value = "";
-        fetchGlobalCommunityFeed();
-        return;
-      } catch (err) { console.error("Cloud post sync error:", err); }
-    }
+  async function insertPostToSupabaseTable(authorName, authorEmail, messageText, imageData) {
+    try {
+      const { error } = await supabaseClient
+        .from('community_posts')
+        .insert([{
+          author_name: authorName,
+          author_email: authorEmail,
+          caption: messageText,
+          image_url: imageData
+        }]);
 
-    // Fallback save logic
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newPostObj = {
-      author: authorName, time: `Today, ${timeString}`,
-      caption: messageText, image: imageData,
-      likes: 0, likedByArray: [], comments: [] 
-    };
-    communityPosts.unshift(newPostObj);
-    localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
-    chatMessageInput.value = ""; 
-    if (chatLookUpload) chatLookUpload.value = "";
-    drawFeedCardsToScreen();
+      if (error) {
+        alert(`Cloud storage insertion failed: ${error.message}`);
+        return;
+      }
+      
+      chatMessageInput.value = "";
+      if (chatLookUpload) chatLookUpload.value = "";
+      fetchGlobalCommunityFeed();
+    } catch (err) { console.error("Cloud insert error:", err); }
   }
 
   fetchGlobalCommunityFeed();
 
 
+
     // ==========================================
-  // 9. AUTOMATED AUDIBLE ALARM ENGINE (8PM & 4PM WAT MONITOR)
+  // 9. AUTOMATED AUDIBLE ALARM ENGINE (WAT STABILIZED)
   // ==========================================
-  // Requests runtime desktop system alerts permission popup
-  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-    Notification.requestPermission();
-  }
+  let lastTriggeredDate8PM = "";
+  let lastTriggeredDate4PM = "";
 
   function checkWeeklyScheduleAlarms() {
     const now = new Date();
     
-    // Convert local system time explicitly to West Africa Time (WAT / UTC+1)
+    // Explicitly target West Africa Time formatting options models
     const watTimeStr = now.toLocaleTimeString("en-US", { timeZone: "Africa/Lagos", hour12: false });
     const watDayStr = now.toLocaleDateString("en-US", { timeZone: "Africa/Lagos", weekday: "long" }).toLowerCase();
+    const watDateKey = now.toLocaleDateString("en-US", { timeZone: "Africa/Lagos" });
     
-    const currentWATTime = watTimeStr.substring(0, 5); // Returns standard "HH:MM" format
+    const currentWATTime = watTimeStr.substring(0, 5); 
+    const currentHour = parseInt(currentWATTime.substring(0,2));
 
     const alarmAudio = document.getElementById("app-alarm-audio");
 
-    // ALARM 1: Sunday through Thursday at 8:00 PM WAT (20:00)
+    // ALARM 1: Sunday through Thursday at 8:00 PM WAT onwards (Hour >= 20)
     const isPlanningDay = ["sunday", "monday", "tuesday", "wednesday", "thursday"].includes(watDayStr);
-    if (isPlanningDay && currentWATTime === "20:00") {
-      // Determine what the target following calendar day string label name is
+    if (isPlanningDay && currentHour >= 20 && lastTriggeredDate8PM !== watDateKey) {
       const dayMap = { sunday: "monday", monday: "tuesday", tuesday: "wednesday", wednesday: "thursday", thursday: "friday" };
       const followingDayName = dayMap[watDayStr];
 
-      if (alarmAudio) alarmAudio.play().catch(() => {});
+      lastTriggeredDate8PM = watDateKey; // Freeze loop state so it triggers once per day
+      if (alarmAudio) alarmAudio.play().catch(e => console.log("Audio play blocked by browser user interaction rules:", e));
       
       if (Notification.permission === "granted") {
         new Notification("👔 Wardrobe Outfit Reminder", {
-          body: `It's 8 PM WAT! Please confirm and log your outfit details for tomorrow (${followingDayName.toUpperCase()}).`,
+          body: `Please confirm and log your outfit options blueprint for tomorrow (${followingDayName.toUpperCase()}).`,
           icon: "https://flaticon.com"
         });
       } else {
-        alert(`⏰ Alarm! Please confirm and select your closet layout options for tomorrow (${followingDayName.toUpperCase()})!`);
+        alert(`⏰ Alarm! Please select your wardrobe choices configuration entries for tomorrow (${followingDayName.toUpperCase()})!`);
       }
     }
 
-    // ALARM 2: Sunday at 4:00 PM WAT (16:00)
-    if (watDayStr === "sunday" && currentWATTime === "16:00") {
+    // ALARM 2: Sunday at 4:00 PM WAT onwards (Hour >= 16)
+    if (watDayStr === "sunday" && currentHour >= 16 && lastTriggeredDate4PM !== watDateKey) {
+      lastTriggeredDate4PM = watDateKey;
       if (alarmAudio) alarmAudio.play().catch(() => {});
 
       if (Notification.permission === "granted") {
         new Notification("🗑️ Weekly Reset Alert", {
-          body: "It's Sunday 4 PM WAT! Remember to reset your previous week's wardrobe choices and map out your fresh schedule.",
+          body: "Remember to reset your previous week's wardrobe choices and map out your fresh schedule blueprint.",
           icon: "https://flaticon.com"
         });
       } else {
-        alert("⏰ Alarm! Remember to clear out your previous week layout matrix and add your new set for the following week!");
+        alert("⏰ Alarm! Remember to clear out your previous week layout matrix and configure your new sets entries!");
       }
     }
   }
 
-  // Set background interval thread polling cycle to run verification queries every 60 seconds
-  setInterval(checkWeeklyScheduleAlarms, 60000);
-  checkWeeklyScheduleAlarms(); // Initial call upon component layout generation passes
+  // Poll validation metrics every 15 seconds to ensure accuracy
+  setInterval(checkWeeklyScheduleAlarms, 15000);
+  
 
   // ==========================================
   // 10. MOBILE CONTEXTUAL DRAWER SYSTEM
