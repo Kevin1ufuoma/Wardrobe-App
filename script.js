@@ -1,19 +1,42 @@
 document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
-  // 0. INITIALIZE NETWORK & DATABASE ENVIRONMENTS
+  // 0. INITIALIZE CLOUD DATABASE API CLIENT (DEFENSIVE VERSION)
   // ==========================================
+  // 🟢 TRIPLE CHECK: Ensure your real links are inside these double quotes!
   const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
+  
   let supabaseClient = null;
   let useCloudDB = false;
 
-  try {
-    if (typeof supabase !== 'undefined') {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      useCloudDB = true;
-      console.log("Connected to Supabase.");
+  // Let's print out what the script sees to your developer console (F12)
+  console.log("🔍 Checking initialization keys...");
+
+  // Safety check to verify placeholder strings were successfully removed
+  const containsPlaceholders = SUPABASE_URL.includes("YOUR_REAL_PROJECT_ID") || SUPABASE_ANON_KEY.includes("YOUR_REAL_ANON_PUBLIC_KEY");
+
+  if (!containsPlaceholders && SUPABASE_URL !== "" && SUPABASE_ANON_KEY !== "") {
+    try {
+      // Handle both lowercase 'supabase' and capital 'Supabase' global instances smoothly
+      if (typeof supabase !== 'undefined') {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        useCloudDB = true;
+        console.log("🟢 Supabase client initialized via global lowercase object.");
+      } else if (typeof Supabase !== 'undefined') {
+        supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        useCloudDB = true;
+        console.log("🟢 Supabase client initialized via global capital object.");
+      } else {
+        console.error("🔴 Fatal Error: The Supabase CDN script library failed to load into your HTML document.");
+      }
+    } catch (err) {
+      console.error("🔴 Supabase connection crash exception:", err);
     }
-  } catch (err) { console.warn("Using local fallback system storage."); }
+  } else {
+    console.warn("⚠️ Initialization Block: Real Supabase API key strings were not detected.");
+  }
+
 
   // ==========================================
   // 1. SELECTOR HOOKS & BASE VARIABLES
@@ -504,8 +527,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let communityPosts = [];
 
   async function fetchGlobalCommunityFeed() {
-    if (!supabaseClient) {
-      if (chatFeedViewport) chatFeedViewport.innerHTML = `<div style="color:red; text-align:center; padding:20px;">⚠️ API Configuration Error: Supabase credentials are missing at the top of script.js</div>`;
+    if (!useCloudDB || !supabaseClient) {
+      if (chatFeedViewport) {
+        chatFeedViewport.innerHTML = `
+          <div style="color:#ef4444; background:#fef2f2; border:1px solid #fee2e2; border-radius:8px; text-align:center; padding:20px; font-size:0.88rem; font-weight:600; line-height:1.5;">
+            ⚠️ API Configuration Error: Supabase credentials are missing or the CDN library is blocked at the top of script.js
+          </div>`;
+      }
       return;
     }
 
