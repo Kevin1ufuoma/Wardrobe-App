@@ -1,9 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-  document.addEventListener("DOMContentLoaded", () => {
   // ==========================================
-  // 0. INITIALIZE CLOUD DATABASE API CLIENT (DEFENSIVE VERSION)
+  // 0. INITIALIZE NETWORK & DATABASE ENVIRONMENTS
   // ==========================================
-  // 🟢 TRIPLE CHECK: Ensure your real links are inside these double quotes!
   const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
   
@@ -36,7 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     console.warn("⚠️ Initialization Block: Real Supabase API key strings were not detected.");
   }
-
 
   // ==========================================
   // 1. SELECTOR HOOKS & BASE VARIABLES
