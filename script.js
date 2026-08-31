@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const SUPABASE_URL = "https://supabase.com/dashboard/project/ibdhreylfyzdvzkiexfs/settings/api-keys/legacy";
+  const SUPABASE_URL = "https://ibdhreylfyzdvzkiexfs.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliZGhyZXlsZnl6ZHZ6a2lleGZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODU0OTQsImV4cCI6MjEwMzc2MTQ5NH0.53fjsCbn8z-2egy4wGcpqnLloWwKFOw2ZIDZrYMrR40";
   
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function dbFetchUserData(email) {
     if (!email) return null;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('wardrobe_users_db') // References your cloud credentials table
         .select('*')
         .eq('email', email.toLowerCase())
@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function dbSaveNewUser(email, userDataProfile) {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('wardrobe_users_db')
         .insert([{
           email: email.toLowerCase(),
