@@ -318,7 +318,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+    // ==========================================
   // 6. CATALOGUE LOOKUP & MIRROR ENGINE
+  // ==========================================
   const canvasTop = document.getElementById("canvas-top-layer");
   const canvasBottom = document.getElementById("canvas-bottom-layer");
   const canvasShoe = document.getElementById("canvas-shoe-layer");
@@ -333,18 +335,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const isMaleActive = malePanel && malePanel.style.display === "block";
     const gender = isMaleActive ? "male" : "female";
     
+    // 1. Read category types safely from the dropdown menus
     const topVal = document.getElementById(`${gender}-tops`) ? document.getElementById(`${gender}-tops`).value : "";
     const waistVal = document.getElementById(`${gender}-waist`) ? document.getElementById(`${gender}-waist`).value : "";
     const shoeVal = document.getElementById(`${gender}-shoes`) ? document.getElementById(`${gender}-shoes`).value : "";
+    const overallVal = document.getElementById(`${gender}-overall`) ? document.getElementById(`${gender}-overall`).value : "";
     
-    const topColor = document.getElementById(`${gender}-top-color`) ? document.getElementById(`${gender}-top-color`).value : "";
-    const otherColor = document.getElementById(`${gender}-other-color`) ? document.getElementById(`${gender}-other-color`).value : "";
+    // 2. Read color selections safely
+    const topColorEl = document.getElementById(`${gender}-top-color`);
+    const waistColorEl = document.getElementById(`${gender}-waist-color`);
+    const shoeColorEl = document.getElementById(`${gender}-shoe-color`);
+    const overallColorEl = document.getElementById(`${gender}-overall-color`);
 
+    const topColor = topColorEl ? topColorEl.value : "";
+    const waistColor = waistColorEl ? waistColorEl.value : "";
+    const shoeColor = shoeColorEl ? shoeColorEl.value : "";
+    const overallColor = overallColorEl ? overallColorEl.value : "";
+    
+    // 3. Fetch your personal wardrobe database snapshot from local memory storage
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "";
     const currentCatalogue = JSON.parse(localStorage.getItem(`wardrobe_catalogue_db_${activeSessionEmail}`)) || {};
 
-    // a. RENDER TOP INTERACTIVE IMAGE
-    if (topVal) {
+    // --- RENDER 1: TOP LAYER PICTURE ---
+    if (overallVal && overallVal !== "none") {
+      const overallLookupKey = `${gender}_${overallVal}_${overallColor}`;
+      if (currentCatalogue[overallLookupKey]) {
+        canvasTopImg.src = currentCatalogue[overallLookupKey];
+        canvasTopImg.style.display = "block";
+        canvasTop.style.display = "none";
+      } else {
+        canvasTopImg.style.display = "none";
+        canvasTop.style.display = "block";
+        canvasTop.textContent = `🧥 [No Image] ${overallColor.toUpperCase()} ${overallVal.toUpperCase()}`;
+      }
+    } else if (topVal) {
       const topLookupKey = `${gender}_${topVal}_${topColor}`;
       if (currentCatalogue[topLookupKey]) {
         canvasTopImg.src = currentCatalogue[topLookupKey];
@@ -361,9 +385,11 @@ document.addEventListener("DOMContentLoaded", () => {
       canvasTop.textContent = "─ Choose a Top ─";
     }
 
-    // b. RENDER WAIST INTERACTIVE IMAGE
+    // --- RENDER 2: WAIST LAYER PICTURE (CLEANED EXTRA FABRIC ARTIFACTS) ---
     if (waistVal) {
-      const waistLookupKey = `${gender}_${waistVal}_${otherColor}`;
+      // 🟢 THE FIX: Standardize lookups directly to the clean "gender_type_color" format with no exceptions
+      const waistLookupKey = `${gender}_${waistVal}_${waistColor}`;
+      
       if (currentCatalogue[waistLookupKey]) {
         canvasBottomImg.src = currentCatalogue[waistLookupKey];
         canvasBottomImg.style.display = "block";
@@ -371,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         canvasBottomImg.style.display = "none";
         canvasBottom.style.display = "block";
-        canvasBottom.textContent = `👖 [No Image] ${otherColor.toUpperCase()} ${waistVal}`;
+        canvasBottom.textContent = `👖 [No Image] ${waistColor.toUpperCase()} ${waistVal.toUpperCase()}`;
       }
     } else {
       canvasBottomImg.style.display = "none";
@@ -379,9 +405,9 @@ document.addEventListener("DOMContentLoaded", () => {
       canvasBottom.textContent = "─ Choose a Waist ─";
     }
 
-    // c. RENDER SHOE INTERACTIVE IMAGE
+    // --- RENDER 3: SHOE LAYER PICTURE ---
     if (shoeVal) {
-      const shoeLookupKey = `${gender}_${shoeVal}_${otherColor}`;
+      const shoeLookupKey = `${gender}_${shoeVal}_${shoeColor}`;
       if (currentCatalogue[shoeLookupKey]) {
         canvasShoeImg.src = currentCatalogue[shoeLookupKey];
         canvasShoeImg.style.display = "block";
@@ -389,7 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         canvasShoeImg.style.display = "none";
         canvasShoe.style.display = "block";
-        canvasShoe.textContent = `👞 [No Image] ${otherColor.toUpperCase()} ${shoeVal}`;
+        canvasShoe.textContent = `👞 [No Image] ${shoeColor.toUpperCase()} ${shoeVal.toUpperCase()}`;
       }
     } else {
       canvasShoeImg.style.display = "none";
@@ -397,6 +423,8 @@ document.addEventListener("DOMContentLoaded", () => {
       canvasShoe.textContent = "─ Choose Shoes ─";
     }
   }
+
+
 
   // 7. THE WEEK DATA RESET ENGINE
   const resetWeekBtn = document.getElementById("reset-week-btn");
