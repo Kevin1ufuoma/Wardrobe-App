@@ -511,7 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
     // ==========================================
-  // 8. COMMUNITY CHAT DRAWER LOGIC (SUPABASE DIRECT SYNC)
+  // 8. COMMUNITY CHAT DRAWER LOGIC (LIVE GLOBAL SUPABASE ENGINE)
   // ==========================================
   const chatToggle = document.getElementById("chat-toggle-widget");
   const chatDrawer = document.getElementById("community-chat-room");
@@ -523,14 +523,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let communityPosts = [];
 
+  // 📡 GLOBAL FETCH: Pull fresh posts live from your Supabase cloud tables
   async function fetchGlobalCommunityFeed() {
-    if (!useCloudDB || !supabaseClient) {
-      if (chatFeedViewport) {
-        chatFeedViewport.innerHTML = `
-          <div style="color:#ef4444; background:#fef2f2; border:1px solid #fee2e2; border-radius:8px; text-align:center; padding:20px; font-size:0.88rem; font-weight:600; line-height:1.5;">
-            ⚠️ API Configuration Error: Supabase credentials are missing or the CDN library is blocked at the top of script.js
-          </div>`;
-      }
+    if (!supabaseClient) {
+      if (chatFeedViewport) chatFeedViewport.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">⚠️ API Configuration Error: Cloud client is uninitialized.</div>`;
       return;
     }
 
@@ -541,32 +537,34 @@ document.addEventListener("DOMContentLoaded", () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Fetch error:", error.message);
+        console.error("Supabase fetch failed:", error.message);
         return;
       }
 
       if (data) {
+        // Map postgresql table columns to our clean frontend template variables
         communityPosts = data.map(item => ({
           id: item.id,
           author: item.author_name,
           time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           caption: item.caption,
           image: item.image_url,
-          likes: item.likes_count,
+          likes: item.likes_count || 0,
           likedByArray: item.liked_by_array || [],
           comments: item.comments_json || []
         }));
         drawFeedCardsToScreen();
       }
     } catch (err) {
-      console.error("Global stream network failure:", err);
+      console.error("Network stream failure:", err);
     }
   }
 
-  async function syncFeedToGlobalCloudNetwork(index, updatedPostObj) {
+  // 📡 GLOBAL ACTION SYNC: Push comments and likes upstream to the cloud server instantly
+  async function syncFeedToGlobalCloudNetwork(updatedPostObj) {
     if (!supabaseClient || !updatedPostObj.id) return;
     try {
-      await supabaseClient
+      const { error } = await supabaseClient
         .from('community_posts')
         .update({
           likes_count: updatedPostObj.likes,
@@ -574,8 +572,13 @@ document.addEventListener("DOMContentLoaded", () => {
           comments_json: updatedPostObj.comments
         })
         .eq('id', updatedPostObj.id);
-      drawFeedCardsToScreen();
-    } catch (err) { console.error("Cloud write sync issue:", err); }
+
+      if (error) {
+        console.error("Failed to sync interaction state:", error.message);
+      } else {
+        drawFeedCardsToScreen();
+      }
+    } catch (err) { console.error("Cloud action exception:", err); }
   }
 
   function drawFeedCardsToScreen() {
@@ -626,6 +629,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chatFeedViewport.appendChild(dynamicCard);
     });
 
+    // Handle Likes Globally
     document.querySelectorAll(".card-like-btn").forEach(btn => {
       btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
@@ -638,11 +642,12 @@ document.addEventListener("DOMContentLoaded", () => {
             communityPosts[idx].likedByArray.push(activeSessionEmail);
             communityPosts[idx].likes = (communityPosts[idx].likes || 0) + 1;
           }
-          syncFeedToGlobalCloudNetwork(idx, communityPosts[idx]);
+          syncFeedToGlobalCloudNetwork(communityPosts[idx]);
         }
       };
     });
 
+    // Handle Comments Globally
     document.querySelectorAll(".card-comment-trigger-btn").forEach(btn => {
       btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
@@ -652,7 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const currentUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
           if (!communityPosts[idx].comments) communityPosts[idx].comments = [];
           communityPosts[idx].comments.push({ user: currentUserName, text: replyText.trim() });
-          syncFeedToGlobalCloudNetwork(idx, communityPosts[idx]);
+          syncFeedToGlobalCloudNetwork(communityPosts[idx]);
         }
       };
     });
@@ -661,11 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (chatToggle && chatDrawer && closeChat) {
     chatToggle.onclick = () => {
       chatDrawer.style.display = "flex"; chatToggle.style.display = "none";
-      // 🟢 THE INTENT: Grant permissions safely within a valid click handler context frame
-      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-      }
-      fetchGlobalCommunityFeed(); 
+      fetchGlobalCommunityFeed(); // Load up all users' posts fresh when expanding drawer
     };
     closeChat.onclick = () => { chatDrawer.style.display = "none"; chatToggle.style.display = "flex"; };
   }
@@ -676,36 +677,24 @@ document.addEventListener("DOMContentLoaded", () => {
       const hasFile = chatLookUpload && chatLookUpload.files && chatLookUpload.files.length > 0;
       if (textMessage === "" && !hasFile) return;
 
-      if (!supabaseClient) {
-        alert("Cannot publish post. Supabase credentials are missing at the top of script.js");
-        return;
-      }
-
       const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "Guest";
       const usersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
       const activeUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
 
-      let finalImageString = "";
       if (hasFile) {
         const file = chatLookUpload.files[0];
-        if (file.size > 200 * 1024) {
-          finalImageString = URL.createObjectURL(file);
-          // Insert text globally to cloud, appending local picture tracking attributes
-          await insertPostToSupabaseTable(activeUserName, activeSessionEmail, textMessage, finalImageString);
-        } else {
-          const reader = new FileReader();
-          reader.onload = async function(evt) { 
-            await insertPostToSupabaseTable(activeUserName, activeSessionEmail, textMessage, evt.target.result); 
-          };
-          reader.readAsDataURL(file);
-        }
+        const reader = new FileReader();
+        reader.onload = async function(evt) { 
+          await broadcastPostToSupabaseCloud(activeUserName, activeSessionEmail, textMessage, evt.target.result); 
+        };
+        reader.readAsDataURL(file);
       } else {
-        await insertPostToSupabaseTable(activeUserName, activeSessionEmail, textMessage, "");
+        await broadcastPostToSupabaseCloud(activeUserName, activeSessionEmail, textMessage, "");
       }
     };
   }
 
-  async function insertPostToSupabaseTable(authorName, authorEmail, messageText, imageData) {
+  async function broadcastPostToSupabaseCloud(authorName, authorEmail, messageText, imageData) {
     try {
       const { error } = await supabaseClient
         .from('community_posts')
@@ -717,16 +706,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }]);
 
       if (error) {
-        alert(`Cloud storage insertion failed: ${error.message}`);
+        alert(`Supabase Cloud Storage Error: ${error.message}`);
         return;
       }
       
+      // Reset input fields on success
       chatMessageInput.value = "";
       if (chatLookUpload) chatLookUpload.value = "";
-      fetchGlobalCommunityFeed();
-    } catch (err) { console.error("Cloud insert error:", err); }
+      
+      // Automatically pull data fresh from cloud server to sync layout viewports
+      await fetchGlobalCommunityFeed();
+    } catch (err) { console.error("Cloud insert exception:", err); }
   }
 
+  // Runtime synchronization trigger
   fetchGlobalCommunityFeed();
 
 
