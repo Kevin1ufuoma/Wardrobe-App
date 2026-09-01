@@ -511,7 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
     // ==========================================
-  // 8. COMMUNITY CHAT DRAWER LOGIC (STABILIZED GLOBAL LIVE SYNC PIPELINE)
+  // 8. COMMUNITY CHAT DRAWER LOGIC (GLOBAL DWEET REAL-TIME PIPELINE)
   // ==========================================
   const chatToggle = document.getElementById("chat-toggle-widget");
   const chatDrawer = document.getElementById("community-chat-room");
@@ -521,50 +521,50 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatFeedViewport = document.getElementById("chat-feed-viewport");
   const chatLookUpload = document.getElementById("chat-look-upload");
 
-  // A completely open, high-speed key-value storage bin routing sync pipeline
-  const GLOBAL_STREAM_URL = "https://restful-api.dev";
+  // Unique global megaphone channel key for your Wardrobe App
+  const GLOBAL_DWEET_CHANNELS_URL = "https://dweet.io";
+  const GLOBAL_DWEET_PUBLISH_URL = "https://dweet.io";
   
   let communityPosts = [];
 
-  // 📡 FETCH LIVE STREAM: Safely download cross-device logs from open cloud channels
+  // 📡 FETCH LIVE STREAM: Safely download cross-device logs from the global megaphone
   async function fetchGlobalCommunityFeed() {
     try {
-      const res = await fetch(GLOBAL_STREAM_URL);
+      const res = await fetch(GLOBAL_DWEET_CHANNELS_URL);
       if (res.ok) {
-        const payload = await res.json();
-        if (payload && payload.data && payload.data.posts) {
-          communityPosts = payload.data.posts;
-          drawFeedCardsToScreen();
-          return;
+        const responseData = await res.json();
+        if (responseData && responseData.with && responseData.with.length > 0) {
+          const cloudRecord = responseData.with[0].content;
+          if (cloudRecord && cloudRecord.posts) {
+            communityPosts = cloudRecord.posts;
+            drawFeedCardsToScreen();
+            return;
+          }
         }
       }
     } catch (err) {
-      console.warn("Global synchronization network delay, reading browser local copy:", err);
+      console.warn("Global network stream delayed, pulling local backup data:", err);
     }
-    // Safe fallback sandbox storage row array mapping assignment
     communityPosts = JSON.parse(localStorage.getItem("wardrobe_community_posts")) || [];
     drawFeedCardsToScreen();
   }
 
   // 📡 UPLOAD INTERACTS SYNC: Broadcasts likes, posts, and comments across all screens instantly
   async function syncFeedToGlobalCloudNetwork() {
-    // 🟢 CRITICAL ADVANCEMENT: Render instantly on your screen first so your button never freezes
+    // Render on local screen instantly for optimal speed
     localStorage.setItem("wardrobe_community_posts", JSON.stringify(communityPosts));
     drawFeedCardsToScreen();
     
     try {
-      // Direct open-object state overwrite structure to guarantee multi-device updates
-      await fetch(GLOBAL_STREAM_URL, {
-        method: "PUT",
+      // Blast the updated array across the web to all visiting phones
+      await fetch(GLOBAL_DWEET_PUBLISH_URL, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "wardrobe_community_global_stream",
-          data: { posts: communityPosts }
-        })
+        body: JSON.stringify({ posts: communityPosts })
       });
-      console.log("Global cross-device cloud synchronization complete.");
+      console.log("Global multi-device broadcast complete.");
     } catch (err) { 
-      console.error("Cloud packet broadcast dropped:", err); 
+      console.error("Megaphone broadcast drop error:", err); 
     }
   }
 
@@ -619,7 +619,7 @@ document.addEventListener("DOMContentLoaded", () => {
       chatFeedViewport.appendChild(dynamicCard);
     });
 
-    // Wire up Likes globally across panels
+    // Wire up Likes globally
     document.querySelectorAll(".card-like-btn").forEach(btn => {
       btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
@@ -637,11 +637,11 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     });
 
-    // Wire up Comments globally across panels
+    // Wire up Comments globally
     document.querySelectorAll(".card-comment-trigger-btn").forEach(btn => {
       btn.onclick = () => {
         const idx = btn.getAttribute("data-index");
-        const replyText = prompt("Type your comment reply to this community card:");
+        const replyText = prompt("Type your comment reply:");
         if (replyText && replyText.trim() !== "") {
           const usersMap = JSON.parse(localStorage.getItem("wardrobe_users_db")) || {};
           const currentUserName = usersMap[activeSessionEmail] ? usersMap[activeSessionEmail].firstName : "Local User";
@@ -656,7 +656,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (chatToggle && chatDrawer && closeChat) {
     chatToggle.onclick = () => {
       chatDrawer.style.display = "flex"; chatToggle.style.display = "none";
-      fetchGlobalCommunityFeed(); // Download the fresh open data stream whenever drawer spans open
+      fetchGlobalCommunityFeed(); // Download the fresh global data whenever drawer opens
     };
     closeChat.onclick = () => { chatDrawer.style.display = "none"; chatToggle.style.display = "flex"; };
   }
@@ -673,7 +673,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (hasFile) {
         const file = chatLookUpload.files[0];
-        // Compress high-res mobile device images to avoid connection timing blocks
+        // Compress high-res mobile photos to prevent upload failures
         if (file.size > 200 * 1024) {
           const localMirrorBlobUrl = URL.createObjectURL(file);
           executeGlobalPostPublish(activeUserName, textMessage, localMirrorBlobUrl);
@@ -704,15 +704,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     communityPosts.unshift(newPostObj);
     
-    // Clear out input container box views instantly
+    // Clear out input fields instantly
     chatMessageInput.value = ""; 
     if (chatLookUpload) chatLookUpload.value = "";
     
-    // Push upstream to the global network to update all screens
+    // Broadcast upstream to the global network to update all screens
     syncFeedToGlobalCloudNetwork();
   }
 
-  // Initial runtime background synchronization pass
+  // Initial runtime download trigger
   fetchGlobalCommunityFeed();
 
 
