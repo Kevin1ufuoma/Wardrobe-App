@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let weeklyOutfitsArchive = { monday: null, tuesday: null, wednesday: null, thursday: null, friday: null };
 
   // ==========================================
-  // 2. THE DYNAMIC ACCOUNT WARDROBE CATALOGUE SYSTEM
+  // 2. THE DYNAMIC ACCOUNT WARDROBE CATALOGUE SYSTEM (CLOUD INTEGRATED)
   // ==========================================
   let wardrobeCatalogue = {};
   const wearUpload = document.getElementById("wear-upload");
@@ -82,14 +82,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadColor = document.getElementById("upload-item-color");
 
   if (wearUpload) {
-    // 🟢 CRITICAL TRACKING: Enforce strict single-listener bindings
-    wearUpload.onchange = (e) => {
+    wearUpload.onchange = async (e) => {
       const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user");
-      if (!activeSessionEmail) { alert("Please log in first."); return; }
+      if (!activeSessionEmail) {
+        alert("Session error! Please log in first.");
+        return;
+      }
 
       const file = e.target.files[0]; 
       if (file) {
-        // Validation check to block illegal cross-gender uploads
+        // Enforce cross-gender catalog parameter safety checks
         const targetGender = uploadGender.value;
         const targetType = uploadType.value;
         if (targetGender === "male" && ["blouse","skirt","high-heels","dress"].includes(targetType)) {
@@ -98,17 +100,45 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const reader = new FileReader();
-        reader.onload = function(evt) {
+        reader.onload = async function(evt) {
           const uniqueCatalogKey = `${targetGender}_${targetType}_${uploadColor.value}`;
-          const dynamicUserCatalogueKey = `wardrobe_catalogue_db_${activeSessionEmail}`;
           
+          // 📡 CLOUD INSERTION: Transmit the clothing item parameters straight to Supabase
+          if (S_URL && !S_URL.includes("your-exact-project-id")) {
+            try {
+              const res = await fetch(`${S_URL}/rest/v1/wardrobe_catalogue`, {
+                method: "POST",
+                headers: {
+                  "apikey": S_KEY,
+                  "Authorization": `Bearer ${S_KEY}`,
+                  "Content-Type": "application/json",
+                  "Prefer": "return=minimal"
+                },
+                body: JSON.stringify({
+                  user_email: activeSessionEmail.toLowerCase().trim(),
+                  catalog_key: uniqueCatalogKey,
+                  image_data_url: evt.target.result
+                })
+              });
+
+              if (res.ok) {
+                alert(`Success! [${uniqueCatalogKey.toUpperCase()}] safely saved to your global cloud wardrobe closet!`);
+                wearUpload.value = ""; 
+                await renderDynamicOutfitPreview();
+                return;
+              }
+            } catch (err) { console.error("Cloud item upload failed:", err); }
+          }
+
+          // Local Backup Fallback
+          const dynamicUserCatalogueKey = `wardrobe_catalogue_db_${activeSessionEmail}`;
           wardrobeCatalogue = JSON.parse(localStorage.getItem(dynamicUserCatalogueKey)) || {};
           wardrobeCatalogue[uniqueCatalogKey] = evt.target.result;
           localStorage.setItem(dynamicUserCatalogueKey, JSON.stringify(wardrobeCatalogue));
           
-          alert(`Catalogue Updated Successfully!`);
+          alert(`Catalogue Updated Locally!`);
           wearUpload.value = ""; 
-          renderDynamicOutfitPreview();
+          await renderDynamicOutfitPreview();
         };
         reader.readAsDataURL(file);
       }
@@ -384,7 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ==========================================
-  // 6. CATALOGUE LOOKUP & MIRROR ENGINE
+  // 6. CATALOGUE LOOKUP & MIRROR ENGINE (CLOUD INTEGRATED)
   // ==========================================
   const canvasTop = document.getElementById("canvas-top-layer");
   const canvasBottom = document.getElementById("canvas-bottom-layer");
@@ -394,7 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const canvasBottomImg = document.getElementById("canvas-bottom-img");
   const canvasShoeImg = document.getElementById("canvas-shoe-img");
 
-  function renderDynamicOutfitPreview() {
+  async function renderDynamicOutfitPreview() {
     if (!canvasTop || !canvasBottom || !canvasShoe) return;
 
     const isMaleActive = malePanel && malePanel.style.display === "block";
@@ -411,52 +441,65 @@ document.addEventListener("DOMContentLoaded", () => {
     const overallColor = document.getElementById(`${gender}-overall-color`) ? document.getElementById(`${gender}-overall-color`).value : "";
 
     const activeSessionEmail = sessionStorage.getItem("active_wardrobe_session_user") || "";
-    const currentCatalogue = JSON.parse(localStorage.getItem(`wardrobe_catalogue_db_${activeSessionEmail}`)) || {};
+    let currentCatalogue = {};
+
+    // 📡 CLOUD SNAPSHOT FETCH: Pull all cataloged clothing assets for this specific user
+    if (S_URL && !S_URL.includes("your-exact-project-id") && activeSessionEmail) {
+      try {
+        const res = await fetch(`${S_URL}/rest/v1/wardrobe_catalogue?user_email=eq.${encodeURIComponent(activeSessionEmail.toLowerCase().trim())}`, {
+          method: "GET",
+          headers: {
+            "apikey": S_KEY,
+            "Authorization": `Bearer ${S_KEY}`,
+            "Content-Type": "application/json"
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Pack incoming query arrays cleanly into a catalog key dictionary
+          data.forEach(item => {
+            currentCatalogue[item.catalog_key] = item.image_data_url;
+          });
+        }
+      } catch (err) { console.warn("Cloud query issue, using local storage snapshot:", err); }
+    }
+
+    if (Object.keys(currentCatalogue).length === 0) {
+      currentCatalogue = JSON.parse(localStorage.getItem(`wardrobe_catalogue_db_${activeSessionEmail}`)) || {};
+    }
 
     // 1. RENDER TOP INTERACTIVE IMAGE
     if (overallVal && overallVal !== "") {
       const overallLookupKey = `${gender}_${overallVal}_${overallColor}`;
       if (currentCatalogue[overallLookupKey]) {
-        canvasTopImg.src = currentCatalogue[overallLookupKey];
-        canvasTopImg.style.display = "block";
-        canvasTop.style.display = "none";
+        canvasTopImg.src = currentCatalogue[overallLookupKey]; canvasTopImg.style.display = "block"; canvasTop.style.display = "none";
       } else {
-        canvasTopImg.style.display = "none";
-        canvasTop.style.display = "block";
+        canvasTopImg.style.display = "none"; canvasTop.style.display = "block";
         canvasTop.textContent = `🧥 [No Image] ${overallColor.toUpperCase()} ${overallVal.toUpperCase()}`;
       }
     } else if (topVal) {
       const topLookupKey = `${gender}_${topVal}_${topColor}`;
       if (currentCatalogue[topLookupKey]) {
-        canvasTopImg.src = currentCatalogue[topLookupKey];
-        canvasTopImg.style.display = "block";
-        canvasTop.style.display = "none";
+        canvasTopImg.src = currentCatalogue[topLookupKey]; canvasTopImg.style.display = "block"; canvasTop.style.display = "none";
       } else {
-        canvasTopImg.style.display = "none";
-        canvasTop.style.display = "block";
+        canvasTopImg.style.display = "none"; canvasTop.style.display = "block";
         canvasTop.textContent = `👕 [No Image] ${topColor.toUpperCase()} ${topVal.replace("-", " ")}`;
       }
     } else {
-      canvasTopImg.style.display = "none";
-      canvasTop.style.display = "block";
-      canvasTop.textContent = "─ Choose a Top ─";
+      canvasTopImg.style.display = "none"; canvasTop.style.display = "block"; canvasTop.textContent = "─ Choose a Top ─";
     }
 
     // 2. RENDER WAIST INTERACTIVE IMAGE
     if (waistVal && !(overallVal && ["dress"].includes(overallVal))) {
       const waistLookupKey = `${gender}_${waistVal}_${waistColor}`;
       if (currentCatalogue[waistLookupKey]) {
-        canvasBottomImg.src = currentCatalogue[waistLookupKey];
-        canvasBottomImg.style.display = "block";
-        canvasBottom.style.display = "none";
+        canvasBottomImg.src = currentCatalogue[waistLookupKey]; canvasBottomImg.style.display = "block"; canvasBottom.style.display = "none";
       } else {
-        canvasBottomImg.style.display = "none";
-        canvasBottom.style.display = "block";
+        canvasBottomImg.style.display = "none"; canvasBottom.style.display = "block";
         canvasBottom.textContent = `👖 [No Image] ${waistColor.toUpperCase()} ${waistVal.toUpperCase()}`;
       }
     } else {
-      canvasBottomImg.style.display = "none";
-      canvasBottom.style.display = "block";
+      canvasBottomImg.style.display = "none"; canvasBottom.style.display = "block";
       canvasBottom.textContent = overallVal === "dress" ? "👗 Gown Active" : "─ Choose a Waist ─";
     }
 
@@ -464,20 +507,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shoeVal) {
       const shoeLookupKey = `${gender}_${shoeVal}_${shoeColor}`;
       if (currentCatalogue[shoeLookupKey]) {
-        canvasShoeImg.src = currentCatalogue[shoeLookupKey];
-        canvasShoeImg.style.display = "block";
-        canvasShoe.style.display = "none";
+        canvasShoeImg.src = currentCatalogue[shoeLookupKey]; canvasShoeImg.style.display = "block"; canvasShoe.style.display = "none";
       } else {
-        canvasShoeImg.style.display = "none";
-        canvasShoe.style.display = "block";
+        canvasShoeImg.style.display = "none"; canvasShoe.style.display = "block";
         canvasShoe.textContent = `👞 [No Image] ${shoeColor.toUpperCase()} ${shoeVal.toUpperCase()}`;
       }
     } else {
-      canvasShoeImg.style.display = "none";
-      canvasShoe.style.display = "block";
-      canvasShoe.textContent = "─ Choose Shoes ─";
+      canvasShoeImg.style.display = "none"; canvasShoe.style.display = "block"; canvasShoe.textContent = "─ Choose Shoes ─";
     }
   }
+
+  // Ensure interface dropdowns refresh the mirror canvas instantly on change
+  maleSelects.forEach(box => box.addEventListener("change", renderDynamicOutfitPreview));
+  femaleSelects.forEach(box => box.addEventListener("change", renderDynamicOutfitPreview));
 
 
     // ==========================================
